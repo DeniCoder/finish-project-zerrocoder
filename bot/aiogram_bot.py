@@ -3,7 +3,7 @@ import sys
 from dotenv import load_dotenv
 import asyncio
 import logging
-from aiogram import Bot, Dispatcher, types, F
+from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.fsm.context import FSMContext
@@ -53,7 +53,7 @@ async def add_expense_amount(message: types.Message, state: FSMContext):
 async def add_expense_category(message: types.Message, state: FSMContext):
     try:
         category_id = int(message.text)
-        category = Category.objects.get(id=category_id, is_income=False)
+        Category.objects.get(id=category_id, is_income=False)
         await state.update_data(category_id=category_id)
     except (ValueError, Category.DoesNotExist):
         await message.answer("Некорректный номер категории. Попробуйте ещё раз.")
