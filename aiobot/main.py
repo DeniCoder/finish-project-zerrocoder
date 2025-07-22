@@ -8,6 +8,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from handlers.expenses import register_expense_handlers
 from handlers.income import register_income_handlers
 from handlers.history import register_history_handlers
+from handlers.history_today import register_history_today_handlers
 
 load_dotenv()
 API_TOKEN = os.getenv("API_TOKEN")
