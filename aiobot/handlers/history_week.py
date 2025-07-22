@@ -1,6 +1,6 @@
 from aiogram import Router, types
 from aiogram.filters import Command
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 import os, sys
 from asgiref.sync import sync_to_async
 
@@ -11,6 +11,11 @@ django.setup()
 from core.models import Transaction
 
 router = Router()
+
+# Словарь для перевода дней недели
+WEEKDAYS_RU = {
+    0: 'Пн', 1: 'Вт', 2: 'Ср', 3: 'Чт', 4: 'Пт', 5: 'Сб', 6: 'Вс'
+}
 
 @router.message(Command("week"))
 async def show_week(message: types.Message):
@@ -23,42 +28,54 @@ async def show_week(message: types.Message):
         return
 
     today = date.today()
-    start_of_week = today - timedelta(days=today.weekday())  # понедельник текущей недели
+    start_of_week = today - timedelta(days=today.weekday())
 
     transactions = await sync_to_async(list)(
         Transaction.objects
-        .filter(user=user_obj, date__gte=start_of_week, date__lte=today)
-        .select_related('category')
-        .order_by('date', '-id')
+            .filter(user=user_obj, date__gte=start_of_week, date__lte=today)
+            .select_related('category')
+            .order_by('date', '-id')
     )
+
     if not transactions:
         await message.answer("За эту неделю ещё не было записей.")
         return
 
-    lines = []
-    sum_income = 0
-    sum_expense = 0
+    # Группируем по дню
+    grouped = dict()
     for t in transactions:
+        d = t.date
+        if d not in grouped:
+            grouped[d] = []
         sign = '+' if t.category.is_income else '-'
-        if t.category.is_income:
-            sum_income += float(t.amount)
-        else:
-            sum_expense += float(t.amount)
-        lines.append(
-            f"{t.date.strftime('%a %d.%m')}: {sign}{t.amount} | {t.category.name} | {t.description or ''}"
+        grouped[d].append(
+            f"{sign}{t.amount} | {t.category.name} | {t.description or '-'}"
         )
 
+    # Строим текст ответа с днями недели на русском
+    lines = ["Операции за текущую неделю:"]
+    day_keys = sorted(grouped.keys())
+
+    for d in day_keys:
+        weekday = WEEKDAYS_RU[d.weekday()]
+        day_head = f"{weekday} {d.strftime('%d.%m.%Y')}:"
+        lines.append(day_head)
+        for op_str in grouped[d]:
+            lines.append(op_str)
+
+    sum_income = sum(float(t.amount) for t in transactions if t.category.is_income)
+    sum_expense = sum(float(t.amount) for t in transactions if not t.category.is_income)
     balance = sum_income - sum_expense
 
-    resp_text = (
-        f"Операции за текущую неделю:\n" +
-        "\n".join(lines) +
-        "\n\n"
-        f"Доход: {sum_income}\n"
-        f"Расход: {sum_expense}\n"
-        f"Баланс: {balance}"
-    )
-    await message.answer(resp_text)
+    lines.append(f"\nДоход: {sum_income}")
+    lines.append(f"Расход: {sum_expense}")
+    lines.append(f"Баланс: {balance}")
+
+    # Для времени — просто dd.mm.yyyy, HH:MM
+    now = datetime.now().strftime("%d.%m.%Y, %H:%M")
+    lines.append(f"Время получения информации: {now}")
+
+    await message.answer("\n".join(lines))
 
 def register_history_week_handlers(dp):
     dp.include_router(router)
