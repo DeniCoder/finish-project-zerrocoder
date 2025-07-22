@@ -22,7 +22,7 @@ from django.contrib.auth.models import User
 from asgiref.sync import sync_to_async
 
 # Состояния для FSM диалога (в отдельном файле states.py)
-from .states import AddExpenseStates, AddIncomeStates
+from aiogram_bot.states import AddExpenseStates, AddIncomeStates
 
 # --- Загрузка токена из .env ---
 load_dotenv()
