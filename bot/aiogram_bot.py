@@ -1,22 +1,30 @@
 import os
 import sys
-from dotenv import load_dotenv
 import asyncio
 import logging
+from dotenv import load_dotenv
+
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
-from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.fsm.context import FSMContext
+from aiogram.fsm.storage.memory import MemoryStorage
 
-# Django инициализация
+# --- Инициализация Django ORM ---
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "fincontrol.settings")
 import django
 django.setup()
 
-from core.models import Transaction, Category  # импорт моделей
-from .states import AddExpenseStates  # импорт состояний
+from core.models import Transaction, Category
+from django.contrib.auth.models import User
 
+# Важно: оборачиваем обращения к ORM!
+from asgiref.sync import sync_to_async
+
+# Состояния для FSM диалога (в отдельном файле states.py)
+from .states import AddExpenseStates
+
+# --- Загрузка токена из .env ---
 load_dotenv()
 API_TOKEN = os.getenv("API_TOKEN")
 
@@ -25,6 +33,7 @@ logging.basicConfig(level=logging.INFO)
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 
+# --- Команды бота ---
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
     await message.answer("Привет! Я помогу тебе вести учёт расходов и доходов.")
@@ -40,11 +49,16 @@ async def add_expense_amount(message: types.Message, state: FSMContext):
         amount = float(message.text.replace(",", "."))
         await state.update_data(amount=amount)
     except ValueError:
-        await message.answer("Пожалуйста, введите число. Пример: 250.75")
+        await message.answer("Пожалуйста, введите число (например: 250.75).")
         return
 
-    # Предложим список категорий расходов
-    categories = Category.objects.filter(is_income=False)
+    # Получаем категории расходов асинхронно
+    categories = await sync_to_async(list)(Category.objects.filter(is_income=False))
+    if not categories:
+        await message.answer("Категории расходов ещё не созданы. Добавьте категории через админ-панель Django.")
+        await state.clear()
+        return
+
     cat_names = "\n".join([f"{cat.id}. {cat.name}" for cat in categories])
     await state.set_state(AddExpenseStates.waiting_for_category)
     await message.answer(f"Выберите категорию (введите номер):\n{cat_names}")
@@ -53,7 +67,8 @@ async def add_expense_amount(message: types.Message, state: FSMContext):
 async def add_expense_category(message: types.Message, state: FSMContext):
     try:
         category_id = int(message.text)
-        Category.objects.get(id=category_id, is_income=False)
+        # Проверяем существование категории
+        category = await sync_to_async(Category.objects.get)(id=category_id, is_income=False)
         await state.update_data(category_id=category_id)
     except (ValueError, Category.DoesNotExist):
         await message.answer("Некорректный номер категории. Попробуйте ещё раз.")
@@ -81,20 +96,19 @@ async def add_expense_date(message: types.Message, state: FSMContext):
 async def add_expense_description(message: types.Message, state: FSMContext):
     data = await state.get_data()
     description = "" if message.text.strip() == "-" else message.text.strip()
+    user = message.from_user
+    user_id = user.id
 
-    # Получаем из state все input'ы пользователя
     try:
-        # Сохраняем расход в Django
-        user = message.from_user  # Telegram user
-        user_id = message.from_user.id
-
-        category = Category.objects.get(id=data["category_id"], is_income=False)
-
-        # Импортируем User из auth, ищем или создаём пользователя
-        from django.contrib.auth.models import User
-        user_obj, created = User.objects.get_or_create(username=str(user_id), defaults={"first_name": user.first_name or ""})
-
-        Transaction.objects.create(
+        # Получаем или создаём пользователя Django по его Telegram ID
+        user_obj, _ = await sync_to_async(User.objects.get_or_create)(
+            username=str(user_id),
+            defaults={"first_name": user.first_name or ""}
+        )
+        category = await sync_to_async(Category.objects.get)(
+            id=data["category_id"], is_income=False
+        )
+        await sync_to_async(Transaction.objects.create)(
             user=user_obj,
             category=category,
             amount=data["amount"],
@@ -107,6 +121,7 @@ async def add_expense_description(message: types.Message, state: FSMContext):
     finally:
         await state.clear()
 
+# --- Главный запуск бота ---
 async def main():
     await dp.start_polling(bot)
 
