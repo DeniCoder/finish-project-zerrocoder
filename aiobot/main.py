@@ -9,6 +9,7 @@ from handlers.expenses import register_expense_handlers
 from handlers.income import register_income_handlers
 from handlers.history import register_history_handlers
 from handlers.history_today import register_history_today_handlers
+from handlers.history_week import register_history_week_handlers
 
 load_dotenv()
 API_TOKEN = os.getenv("API_TOKEN")
@@ -21,6 +22,8 @@ dp = Dispatcher(storage=MemoryStorage())
 register_expense_handlers(dp)
 register_income_handlers(dp)
 register_history_handlers(dp)
+register_history_today_handlers(dp)
+register_history_week_handlers(dp)
 
 async def main():
     await dp.start_polling(bot)
