@@ -1,6 +1,6 @@
 from aiogram import Router, types
 from aiogram.filters import Command
-from datetime import date
+from datetime import date, datetime
 import os, sys
 from asgiref.sync import sync_to_async
 
@@ -44,18 +44,22 @@ async def show_today(message: types.Message):
         else:
             sum_expense += float(t.amount)
         lines.append(
-            f"{sign}{t.amount} | {t.category.name}\n{t.description or ''}"
+            f"{sign}{t.amount} | {t.category.name} | {t.description or '-'}"
         )
 
     balance = sum_income - sum_expense
 
+    # Для времени — просто dd.mm.yyyy, HH:MM
+    now = datetime.now().strftime("%d.%m.%Y, %H:%M")
+
     resp_text = (
         f"Операции за сегодня:\n" +
-        "\n\n".join(lines) +
+        "\n".join(lines) +
         "\n\n"
         f"Доход: {sum_income}\n"
         f"Расход: {sum_expense}\n"
-        f"Баланс: {balance}"
+        f"Баланс: {balance}\n"
+        f"Время получения информации: {now}"
     )
     await message.answer(resp_text)
 

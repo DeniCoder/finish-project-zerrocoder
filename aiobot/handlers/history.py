@@ -1,6 +1,6 @@
 from aiogram import Router, types
 from aiogram.filters import Command
-
+from datetime import datetime
 import os, sys
 from asgiref.sync import sync_to_async
 
@@ -13,6 +13,10 @@ from core.models import Transaction
 
 router = Router()
 
+# Словарь для перевода дней недели
+WEEKDAYS_RU = {
+    0: 'Пн', 1: 'Вт', 2: 'Ср', 3: 'Чт', 4: 'Пт', 5: 'Сб', 6: 'Вс'
+}
 
 @router.message(Command("history"))
 async def show_history(message: types.Message):
@@ -37,15 +41,33 @@ async def show_history(message: types.Message):
         await message.answer("Операций пока нет.")
         return
 
-    lines = []
+    # Группируем операции по дате
+    grouped = dict()
     for t in transactions:
+        d = t.date
+        if d not in grouped:
+            grouped[d] = []
         sign = '+' if t.category.is_income else '-'
-        line = f"{sign}{t.amount} | {t.category.name} | {t.date.strftime('%Y-%m-%d')}\n{t.description or ''}"
-        lines.append(line)
+        grouped[d].append(
+            f"{sign}{t.amount} | {t.category.name} | {t.description or '-'}"
+        )
 
-    resp_text = "Последние 10 операций:\n" + "\n\n".join(lines)
-    await message.answer(resp_text)
+    # Строим текст ответа с днями недели на русском
+    lines = ["Последние 10 операций:"]
+    day_keys = sorted(grouped.keys(), reverse=True)
 
+    for d in day_keys:
+        weekday = WEEKDAYS_RU[d.weekday()]
+        day_head = f"{weekday} {d.strftime('%d.%m.%Y')}:"
+        lines.append(day_head)
+        for op_str in grouped[d]:
+            lines.append(op_str)
+
+    # Время запроса — просто dd.mm.yyyy, HH:MM
+    now = datetime.now().strftime("%d.%m.%Y, %H:%M")
+    lines.append(f"\nВремя получения информации: {now}")
+
+    await message.answer("\n".join(lines))
 
 def register_history_handlers(dp):
     dp.include_router(router)

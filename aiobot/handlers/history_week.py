@@ -41,7 +41,7 @@ async def show_week(message: types.Message):
         await message.answer("За эту неделю ещё не было записей.")
         return
 
-    # Группируем по дню
+    # Группируем операции по дате
     grouped = dict()
     for t in transactions:
         d = t.date
@@ -71,7 +71,7 @@ async def show_week(message: types.Message):
     lines.append(f"Расход: {sum_expense}")
     lines.append(f"Баланс: {balance}")
 
-    # Для времени — просто dd.mm.yyyy, HH:MM
+    # Время запроса — просто dd.mm.yyyy, HH:MM
     now = datetime.now().strftime("%d.%m.%Y, %H:%M")
     lines.append(f"Время получения информации: {now}")
 
