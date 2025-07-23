@@ -10,6 +10,7 @@ from handlers.income import register_income_handlers
 from handlers.history import register_history_handlers
 from handlers.history_today import register_history_today_handlers
 from handlers.history_week import register_history_week_handlers
+from handlers.history_month import register_history_month_handlers
 
 load_dotenv()
 API_TOKEN = os.getenv("API_TOKEN")
@@ -24,6 +25,7 @@ register_income_handlers(dp)
 register_history_handlers(dp)
 register_history_today_handlers(dp)
 register_history_week_handlers(dp)
+register_history_month_handlers(dp)
 
 async def main():
     await dp.start_polling(bot)
