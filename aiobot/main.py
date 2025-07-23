@@ -13,6 +13,7 @@ from handlers.history_week import register_history_week_handlers
 from handlers.history_month import register_history_month_handlers
 from handlers.history_category import register_history_category_handlers
 from handlers.summary import register_summary_handlers
+from handlers.charts import register_chart_handlers
 
 load_dotenv()
 API_TOKEN = os.getenv("API_TOKEN")
@@ -30,6 +31,7 @@ register_history_week_handlers(dp)
 register_history_month_handlers(dp)
 register_history_category_handlers(dp)
 register_summary_handlers(dp)
+register_chart_handlers(dp)
 
 async def main():
     await dp.start_polling(bot)

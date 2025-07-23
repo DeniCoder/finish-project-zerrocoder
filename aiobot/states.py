@@ -18,3 +18,8 @@ class AddIncomeStates(StatesGroup):
 class CategoryStatsStates(StatesGroup):
     waiting_for_type = State()
     waiting_for_category = State()
+
+# Состояния FSM для графика
+class ChartStates(StatesGroup):
+    waiting_for_type = State()
+    waiting_for_period = State()
