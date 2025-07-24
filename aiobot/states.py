@@ -22,4 +22,8 @@ class CategoryStatsStates(StatesGroup):
 # Состояния FSM для графика
 class ChartStates(StatesGroup):
     waiting_for_type = State()
-    waiting_for_period = State()
+    waiting_for_period_type = State()
+    waiting_for_day = State()
+    waiting_for_range = State()
+    waiting_for_month = State()
+    waiting_for_year = State()
