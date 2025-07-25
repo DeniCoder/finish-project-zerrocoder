@@ -8,6 +8,7 @@ import os, sys, tempfile, asyncio
 from asgiref.sync import sync_to_async
 from collections import defaultdict
 from aiobot.states import ChartStates
+from aiobot.utils.formatting import format_rub
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../../")
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "fincontrol.settings")
@@ -150,10 +151,10 @@ async def draw_chart(message: types.Message, state: FSMContext, start: date, end
     plt.title(title_str)
 
     sum_amount = sum(by_cat.values())
-    caption_lines = [f"{name}: {v:.2f} руб." for name, v in sorted_items]
+    caption_lines = [f"{name}: {format_rub(v)} руб." for name, v in sorted_items]
     now = datetime.now().strftime("%d.%m.%Y, %H:%M")
     caption = (
-            f"{diag_title} всего: {sum_amount:.2f} руб.\n"
+            f"{diag_title} всего: {format_rub(sum_amount)} руб.\n"
             + "\n".join(caption_lines)
             + f"\nДанные предоставлены: {now}"
     )

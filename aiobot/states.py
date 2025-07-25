@@ -27,3 +27,11 @@ class ChartStates(StatesGroup):
     waiting_for_range = State()
     waiting_for_month = State()
     waiting_for_year = State()
+
+# FSM-состояния для выбора периода для столбчатой диаграммы и статистики
+class SummaryStates(StatesGroup):
+    waiting_for_period_type = State()
+    waiting_for_day = State()
+    waiting_for_range = State()
+    waiting_for_month = State()
+    waiting_for_year = State()
