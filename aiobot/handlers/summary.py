@@ -200,22 +200,22 @@ async def prepare_and_send_summary(message, state, start: date, end: date):
     if income_by_cat:
         big_income_cat, big_income_val = max(income_by_cat.items(), key=lambda x: x[1])
         income_share = big_income_val / sum_income * 100 if sum_income else 0
-        inc_text = f"Больше всего доходов по категории: \n{big_income_cat} — {format_rub(big_income_val)} руб. ({income_share:.1f}% всех доходов)."
+        inc_text = f"Больше всего доходов по категории: \n{big_income_cat} — {format_rub(big_income_val)} ({income_share:.1f}% всех доходов)."
     else:
         inc_text = "В выбранном периоде не было доходов."
     if expense_by_cat:
         big_exp_cat, big_exp_val = max(expense_by_cat.items(), key=lambda x: x[1])
         exp_share = big_exp_val / sum_expense * 100 if sum_expense else 0
-        exp_text = f"Больше всего расходов по категории: \n{big_exp_cat} — {format_rub(big_exp_val)} руб. ({exp_share:.1f}% всех расходов)."
+        exp_text = f"Больше всего расходов по категории: \n{big_exp_cat} — {format_rub(big_exp_val)} ({exp_share:.1f}% всех расходов)."
     else:
         exp_text = "В выбранном периоде не было расходов."
 
     now = datetime.now().strftime("%d.%m.%Y, %H:%M")
 
     caption = (
-        f"Финансовый итог: {format_rub(balance)} руб.\n"
-        f"Доход: {format_rub(sum_income)} руб.\n"
-        f"Расход: {format_rub(sum_expense)} руб.\n\n"
+        f"Финансовый итог: {format_rub(balance)}\n"
+        f"Доход: {format_rub(sum_income)}\n"
+        f"Расход: {format_rub(sum_expense)}\n\n"
         f"{inc_text}\n"
         f"{exp_text}\n"
         f"Данные предоставлены: {now}"

@@ -151,10 +151,10 @@ async def draw_chart(message: types.Message, state: FSMContext, start: date, end
     plt.title(title_str)
 
     sum_amount = sum(by_cat.values())
-    caption_lines = [f"{name}: {format_rub(v)} руб." for name, v in sorted_items]
+    caption_lines = [f"{name}: {format_rub(v)}" for name, v in sorted_items]
     now = datetime.now().strftime("%d.%m.%Y, %H:%M")
     caption = (
-            f"{diag_title} всего: {format_rub(sum_amount)} руб.\n"
+            f"{diag_title} всего: {format_rub(sum_amount)}\n"
             + "\n".join(caption_lines)
             + f"\nДанные предоставлены: {now}"
     )

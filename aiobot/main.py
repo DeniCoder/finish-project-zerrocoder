@@ -8,10 +8,6 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from handlers.expenses import register_expense_handlers
 from handlers.income import register_income_handlers
 from handlers.history import register_history_handlers
-from handlers.history_today import register_history_today_handlers
-from handlers.history_week import register_history_week_handlers
-from handlers.history_month import register_history_month_handlers
-from handlers.history_category import register_history_category_handlers
 from handlers.summary import register_summary_handlers
 from handlers.charts import register_chart_handlers
 
@@ -26,10 +22,6 @@ dp = Dispatcher(storage=MemoryStorage())
 register_expense_handlers(dp)
 register_income_handlers(dp)
 register_history_handlers(dp)
-register_history_today_handlers(dp)
-register_history_week_handlers(dp)
-register_history_month_handlers(dp)
-register_history_category_handlers(dp)
 register_summary_handlers(dp)
 register_chart_handlers(dp)
 
