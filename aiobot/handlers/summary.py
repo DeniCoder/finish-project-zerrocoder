@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 from collections import defaultdict
 from aiobot.states import SummaryStates
 from aiobot.utils.formatting import format_rub
+from aiobot.utils.anomalies import detect_anomalies
 
 
 router = Router()
@@ -216,15 +217,24 @@ async def prepare_and_send_summary(message, state, start: date, end: date):
         exp_text = "В выбранном периоде не было расходов."
 
     now = datetime.now().strftime("%d.%m.%Y, %H:%M")
+    anomalies = await detect_anomalies(user_obj, start, end, months_back=3)
 
-    caption = (
-        f"Финансовый итог: {format_rub(balance)}\n"
-        f"Доход: {format_rub(sum_income)}\n"
-        f"Расход: {format_rub(sum_expense)}\n\n"
-        f"{inc_text}\n"
-        f"{exp_text}\n"
-        f"Данные предоставлены: {now}"
-    )
+    caption_lines = [
+        f"Финансовый итог: {format_rub(balance)}",
+        f"Доход: {format_rub(sum_income)}",
+        f"Расход: {format_rub(sum_expense)}",
+        "",
+        inc_text,
+        exp_text,
+    ]
+
+    # Вставляем советы, если есть аномалии
+    if anomalies:
+        caption_lines.append("\n🧐 Аналитика:")
+        caption_lines.extend(anomalies)
+
+    caption_lines.append(f"Данные предоставлены: {now}")
+    caption = "\n".join(caption_lines)
 
     await message.answer_photo(plot_file, caption=caption)
     await asyncio.sleep(0.2)

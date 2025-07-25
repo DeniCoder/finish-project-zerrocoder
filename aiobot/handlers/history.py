@@ -6,6 +6,7 @@ from aiobot.utils.formatting import format_rub
 from aiobot.utils.datetime_formats import WEEKDAYS_RU
 from datetime import date, datetime, timedelta
 from asgiref.sync import sync_to_async
+from aiobot.utils.anomalies import detect_anomalies
 
 router = Router()
 
@@ -174,7 +175,7 @@ async def show_history_result(message, state, start: date, end: date):
             ).order_by('date', '-id')
         )
         sign = '+' if category.is_income else '-'
-        lines = [f"Операции по категории «{category.name}» за период {period_str}:"]
+        lines = [f"Операции по категории «{category.name}» за период {period_str}:\n"]
         grouped = {}
         for t in transactions:
             d = t.date
@@ -188,6 +189,12 @@ async def show_history_result(message, state, start: date, end: date):
         total = sum(float(t.amount) for t in transactions)
         label = "Доход" if category.is_income else "Расход"
         lines.append(f"\n{label} по категории: {format_rub(total)}")
+        anomalies = await detect_anomalies(user_obj, start, end, months_back=2)
+        curr_cat_name = category.name
+        filtered = [a for a in anomalies if f"«{curr_cat_name}»" in a]
+        if filtered:
+            lines.append("\n🧐 Аналитика:")
+            lines.extend(filtered)
     else:
         transactions = await sync_to_async(list)(
             Transaction.objects.filter(
@@ -203,7 +210,7 @@ async def show_history_result(message, state, start: date, end: date):
             grouped[d].append(
                 f"{sign}{format_rub(float(t.amount))} | {t.category.name} | {t.description or '-'}"
             )
-        lines = [f"Операции за период {period_str}:"]
+        lines = [f"Операции за период {period_str}:\n"]
         for d in sorted(grouped.keys()):
             weekday = WEEKDAYS_RU[d.weekday()]
             lines.append(f"{weekday} {d.strftime('%d.%m.%Y')}:")
@@ -214,6 +221,11 @@ async def show_history_result(message, state, start: date, end: date):
         lines.append(f"\nДоход: {format_rub(sum_income)}")
         lines.append(f"Расход: {format_rub(sum_expense)}")
         lines.append(f"Баланс: {format_rub(balance)}")
+        anomalies = await detect_anomalies(user_obj, start, end, months_back=2)
+        if anomalies:
+            lines.append("\n🧐 Аналитика:")
+            lines.extend(anomalies)
+
     now = datetime.now().strftime("%d.%m.%Y, %H:%M")
     lines.append(f"Данные предоставлены: {now}")
     await message.answer("\n".join(lines))
