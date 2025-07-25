@@ -1,4 +1,4 @@
-from aiogram import Router, types
+from aiogram import Router, types, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import FSInputFile
@@ -18,10 +18,16 @@ from core.models import Transaction
 
 router = Router()
 
+@router.message(F.text.casefold() == "отмена")
+async def cancel_fsm(message: types.Message, state: FSMContext):
+    await state.clear()
+    await message.answer("Ввод отменён.")
+
 @router.message(Command("chart"))
 async def chart_start(message: types.Message, state: FSMContext):
     await state.set_state(ChartStates.waiting_for_type)
-    await message.answer("Построить диаграмму по:\n1. Расходам\n2. Доходам\n\nВведите цифру (1 или 2):")
+    await message.answer("Построить диаграмму по:\n1. Расходам\n2. Доходам\n\n"
+                         "Введите цифру (1 или 2):")
 
 @router.message(ChartStates.waiting_for_type)
 async def chart_type(message: types.Message, state: FSMContext):

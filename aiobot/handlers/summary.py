@@ -1,4 +1,4 @@
-from aiogram import Router, types
+from aiogram import Router, types, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import FSInputFile
@@ -12,6 +12,11 @@ from aiobot.utils.formatting import format_rub
 
 
 router = Router()
+
+@router.message(F.text.casefold() == "отмена")
+async def cancel_fsm(message: types.Message, state: FSMContext):
+    await state.clear()
+    await message.answer("Ввод отменён.")
 
 def format_period(start: date, end: date) -> str:
     if start == end:

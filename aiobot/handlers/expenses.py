@@ -1,4 +1,4 @@
-from aiogram import Router, types
+from aiogram import Router, types, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiobot.states import AddExpenseStates
@@ -14,6 +14,11 @@ from core.models import Transaction, Category
 from django.contrib.auth.models import User
 
 router = Router()
+
+@router.message(F.text.casefold() == "отмена")
+async def cancel_fsm(message: types.Message, state: FSMContext):
+    await state.clear()
+    await message.answer("Ввод отменён.")
 
 @router.message(Command("add_expense"))
 async def start_add_expense(message: types.Message, state: FSMContext):
@@ -53,7 +58,7 @@ async def add_expense_category(message: types.Message, state: FSMContext):
 
     await state.update_data(category_id=category_choices[cat_num])
     await state.set_state(AddExpenseStates.waiting_for_date)
-    await message.answer("Укажите дату расхода в формате ГГГГ-ММ-ДД (или 'сегодня'):")
+    await message.answer("Укажите дату расхода в формате ДД.ММ.ГГГГ (или 'сегодня'):")
 
 @router.message(AddExpenseStates.waiting_for_date)
 async def add_expense_date(message: types.Message, state: FSMContext):
@@ -63,9 +68,9 @@ async def add_expense_date(message: types.Message, state: FSMContext):
         dt = date.today()
     else:
         try:
-            dt = datetime.strptime(text, "%Y-%m-%d").date()
+            dt = datetime.strptime(text, "%d.%m.%Y").date()
         except ValueError:
-            await message.answer("Некорректная дата. Пример: 2025-07-21 или 'сегодня'.")
+            await message.answer("Некорректная дата. Пример: 21.07.2025 или 'сегодня'.")
             return
     await state.update_data(date=dt)
     await state.set_state(AddExpenseStates.waiting_for_description)

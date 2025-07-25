@@ -1,4 +1,4 @@
-from aiogram import Router, types
+from aiogram import Router, types, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiobot.states import HistoryStates
@@ -8,6 +8,11 @@ from datetime import date, datetime, timedelta
 from asgiref.sync import sync_to_async
 
 router = Router()
+
+@router.message(F.text.casefold() == "отмена")
+async def cancel_fsm(message: types.Message, state: FSMContext):
+    await state.clear()
+    await message.answer("Ввод отменён.")
 
 @router.message(Command("history"))
 async def history_scope(message: types.Message, state: FSMContext):
