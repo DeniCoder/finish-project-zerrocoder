@@ -218,7 +218,9 @@ async def prepare_and_send_summary(message, state, start: date, end: date):
         exp_text = "В выбранном периоде не было расходов."
 
     now = datetime.now().strftime("%d.%m.%Y, %H:%M")
-    anomalies = await detect_anomalies(user_obj, start, end, months_back=3)
+    anomalies = await detect_anomalies(user_obj, start, end)
+    if not anomalies:
+        anomalies = await detect_anomalies(user_obj, start, end, months_back=2)
 
     caption_lines = [
         f"Финансовый итог: {format_rub(balance)}",

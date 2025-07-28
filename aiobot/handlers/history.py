@@ -189,7 +189,9 @@ async def show_history_result(message, state, start: date, end: date):
         total = sum(float(t.amount) for t in transactions)
         label = "Доход" if category.is_income else "Расход"
         lines.append(f"\n{label} по категории: {format_rub(total)}")
-        anomalies = await detect_anomalies(user_obj, start, end, months_back=2)
+        anomalies = await detect_anomalies(user_obj, start, end)
+        if not anomalies:
+            anomalies = await detect_anomalies(user_obj, start, end, months_back=2)
         curr_cat_name = category.name
         filtered = [a for a in anomalies if f"«{curr_cat_name}»" in a]
         if filtered:
@@ -221,7 +223,9 @@ async def show_history_result(message, state, start: date, end: date):
         lines.append(f"\nДоход: {format_rub(sum_income)}")
         lines.append(f"Расход: {format_rub(sum_expense)}")
         lines.append(f"Баланс: {format_rub(balance)}")
-        anomalies = await detect_anomalies(user_obj, start, end, months_back=2)
+        anomalies = await detect_anomalies(user_obj, start, end)
+        if not anomalies:
+            anomalies = await detect_anomalies(user_obj, start, end, months_back=2)
         if anomalies:
             lines.append("\n🧐 Аналитика:")
             lines.extend(anomalies)
