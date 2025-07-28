@@ -45,8 +45,19 @@ async def setlimit_category_select(message: types.Message, state: FSMContext):
         await message.answer("Нет такой категории. Попробуйте еще раз.")
         return
     await state.update_data(category_id=category_choices[num])
+    await state.set_state(SetLimitStates.waiting_for_period_type)
+    await message.answer("Для какого периода задать лимит?\n1. День\n2. Месяц\n3. Год\nВыберите цифру:")
+
+@router.message(SetLimitStates.waiting_for_period_type)
+async def setlimit_period_select(message: types.Message, state: FSMContext):
+    periods = {"1": "day", "2": "month", "3": "year"}
+    choice = message.text.strip()
+    if choice not in periods:
+        await message.answer("Выберите: 1 (день), 2 (месяц), 3 (год)")
+        return
+    await state.update_data(period_type=periods[choice])
     await state.set_state(SetLimitStates.waiting_for_amount)
-    await message.answer("Введите лимит (руб.) для выбранной категории:")
+    await message.answer("Введите лимит (руб.) для выбранной категории и периода:")
 
 @router.message(SetLimitStates.waiting_for_amount)
 async def setlimit_amount(message: types.Message, state: FSMContext):
@@ -62,8 +73,9 @@ async def setlimit_amount(message: types.Message, state: FSMContext):
         return
     user = await sync_to_async(User.objects.get)(username=str(message.from_user.id))
     category = await sync_to_async(Category.objects.get)(id=data["category_id"])
+    period_type = data["period_type"]
     limit, _ = await sync_to_async(CategoryLimit.objects.update_or_create)(
-        user=user, category=category, defaults={"amount": amount})
+        user=user, category=category, period_type=period_type, defaults={"amount": amount})
     await message.answer(f"Лимит {format_rub(amount)} установлен для категории «{category.name}».")
     await state.clear()
 

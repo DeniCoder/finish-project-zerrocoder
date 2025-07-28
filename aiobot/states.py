@@ -46,4 +46,5 @@ class SummaryStates(StatesGroup):
 class SetLimitStates(StatesGroup):
     waiting_for_category_type = State()
     waiting_for_category = State()
+    waiting_for_period_type = State()
     waiting_for_amount = State()

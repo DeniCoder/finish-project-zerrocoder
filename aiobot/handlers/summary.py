@@ -215,7 +215,7 @@ async def prepare_and_send_summary(message, state, start: date, end: date):
         exp_share = big_exp_val / sum_expense * 100 if sum_expense else 0
         # Получаем объект категории по имени
         big_exp_cat_obj = await sync_to_async(Category.objects.get)(name=big_exp_cat, is_income=False)
-        limit_str = await check_limit_exceed(user_obj, big_exp_cat_obj, big_exp_val)
+        limit_str = await check_limit_exceed(user_obj, big_exp_cat_obj, big_exp_val, period_type)
         exp_emoji = "⚠️" if limit_str else "🏆"
         exp_text = f"{exp_emoji} Больше всего расходов по категории: \n{big_exp_cat} — {format_rub(big_exp_val)} ({exp_share:.1f}% всех расходов)."
         if limit_str:

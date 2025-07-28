@@ -46,13 +46,19 @@ class Transaction(models.Model):
 
 
 class CategoryLimit(models.Model):
+    PERIOD_CHOICES = [
+        ("day", "День"),
+        ("month", "Месяц"),
+        ("year", "Год"),
+    ]
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     category = models.ForeignKey('Category', on_delete=models.CASCADE)
+    period_type = models.CharField(max_length=10, choices=PERIOD_CHOICES, default="month")
     amount = models.DecimalField(max_digits=15, decimal_places=2)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ('user', 'category')
+        unique_together = ('user', 'category', 'period_type')
 
     def __str__(self):
-        return f"{self.user}: {self.category.name} (лимит {self.amount} руб.)"
+        return f"{self.user}: {self.category.name} ({self.get_period_type_display()}) — лимит {self.amount} руб."

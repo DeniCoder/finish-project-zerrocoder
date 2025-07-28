@@ -4,13 +4,15 @@ from aiobot.utils.formatting import format_rub
 from asgiref.sync import sync_to_async
 from core.models import CategoryLimit
 
-async def check_limit_exceed(user, category, total: float) -> str | None:
-    limit = await sync_to_async(CategoryLimit.objects.filter(user=user, category=category).first)()
+async def check_limit_exceed(user, category, total: float, period_type: str) -> str | None:
+    limit = await sync_to_async(CategoryLimit.objects.filter(
+        user=user, category=category, period_type=period_type).first)()
     if limit and total > float(limit.amount):
         exceed_limit = total - float(limit.amount)
         percent = (total - float(limit.amount)) / float(limit.amount) * 100
-        return (f"\n🔥 Превышение лимита по категории «{category.name}»: "
-                f"{format_rub(exceed_limit)} (лимит {format_rub(limit.amount)}, превышение {percent:.1f}%)")
+        return (f"\n🔥 Превышение лимита по категории «{category.name}» "
+                f"за {limit.get_period_type_display().lower()}: {format_rub(exceed_limit)} "
+                f"(лимит {format_rub(limit.amount)}, превышен на {percent:.1f}%)")
     return None
 
 
