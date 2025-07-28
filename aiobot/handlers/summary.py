@@ -105,7 +105,6 @@ async def summary_year(message: types.Message, state: FSMContext):
     await prepare_and_send_summary(message, state, start, end)
 
 async def prepare_and_send_summary(message, state, start: date, end: date):
-    # Импортам дублирующим не удивляйтесь: так проще избежать ошибок на старте aiogram-проекта
     from core.models import Transaction
     from django.contrib.auth.models import User
 
@@ -164,8 +163,7 @@ async def prepare_and_send_summary(message, state, start: date, end: date):
     colors_expense = [cmap(i) for i in range(10, 20)]  # другие уникальные цвета для расходов
 
     fig, ax = plt.subplots(figsize=(7, 5))
-    bar_width = 0.25
-    index = [0, 1]
+    bar_width = 0.3
 
     for i, (label, sublabels, vals) in enumerate(groups):
         bottom = 0
@@ -173,12 +171,15 @@ async def prepare_and_send_summary(message, state, start: date, end: date):
         for idx, (v, cat_label) in enumerate(zip(vals, sublabels)):
             ax.bar(
                 i, v, bar_width, bottom=bottom, label=cat_label,
-                color=colors[idx % len(colors)]
+                color=colors[idx % len(colors)],
             )
             bottom += v
 
-    ax.set_xticks([0, 1])
-    ax.set_xticklabels(['Доход', 'Расход'])
+
+    ax.set_xlim(-0.3, 1.3)
+
+    ax.set_xticks(range(len(groups)))
+    ax.set_xticklabels([label for label, _, _ in groups])
     ax.set_ylabel("Сумма, руб.")
     period_str = format_period(start, end)
     plt.title(f"Доходы и расходы за период {period_str}")
