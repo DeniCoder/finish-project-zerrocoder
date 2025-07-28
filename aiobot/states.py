@@ -41,3 +41,9 @@ class SummaryStates(StatesGroup):
     waiting_for_range = State()
     waiting_for_month = State()
     waiting_for_year = State()
+
+# FSM-состояния для задания лимита
+class SetLimitStates(StatesGroup):
+    waiting_for_category_type = State()
+    waiting_for_category = State()
+    waiting_for_amount = State()

@@ -6,7 +6,7 @@ from aiobot.utils.formatting import format_rub
 from aiobot.utils.datetime_formats import WEEKDAYS_RU
 from datetime import date, datetime, timedelta
 from asgiref.sync import sync_to_async
-from aiobot.utils.anomalies import detect_anomalies
+from aiobot.utils.anomalies import detect_anomalies, check_limit_exceed
 
 router = Router()
 

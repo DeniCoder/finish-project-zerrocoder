@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from collections import defaultdict
 from aiobot.states import SummaryStates
 from aiobot.utils.formatting import format_rub
-from aiobot.utils.anomalies import detect_anomalies
+from aiobot.utils.anomalies import detect_anomalies, check_limit_exceed
 
 
 router = Router()
@@ -105,7 +105,7 @@ async def summary_year(message: types.Message, state: FSMContext):
     await prepare_and_send_summary(message, state, start, end)
 
 async def prepare_and_send_summary(message, state, start: date, end: date):
-    from core.models import Transaction
+    from core.models import Transaction, Category
     from django.contrib.auth.models import User
 
     user_id = message.from_user.id
@@ -207,13 +207,19 @@ async def prepare_and_send_summary(message, state, start: date, end: date):
     if income_by_cat:
         big_income_cat, big_income_val = max(income_by_cat.items(), key=lambda x: x[1])
         income_share = big_income_val / sum_income * 100 if sum_income else 0
-        inc_text = f"Больше всего доходов по категории: \n{big_income_cat} — {format_rub(big_income_val)} ({income_share:.1f}% всех доходов)."
+        inc_text = f"🏆 Больше всего доходов по категории: \n{big_income_cat} — {format_rub(big_income_val)} ({income_share:.1f}% всех доходов)."
     else:
         inc_text = "В выбранном периоде не было доходов."
     if expense_by_cat:
         big_exp_cat, big_exp_val = max(expense_by_cat.items(), key=lambda x: x[1])
         exp_share = big_exp_val / sum_expense * 100 if sum_expense else 0
-        exp_text = f"Больше всего расходов по категории: \n{big_exp_cat} — {format_rub(big_exp_val)} ({exp_share:.1f}% всех расходов)."
+        # Получаем объект категории по имени
+        big_exp_cat_obj = await sync_to_async(Category.objects.get)(name=big_exp_cat, is_income=False)
+        limit_str = await check_limit_exceed(user_obj, big_exp_cat_obj, big_exp_val)
+        exp_emoji = "⚠️" if limit_str else "🏆"
+        exp_text = f"{exp_emoji} Больше всего расходов по категории: \n{big_exp_cat} — {format_rub(big_exp_val)} ({exp_share:.1f}% всех расходов)."
+        if limit_str:
+            exp_text += f"\n{limit_str}"
     else:
         exp_text = "В выбранном периоде не было расходов."
 
@@ -222,8 +228,9 @@ async def prepare_and_send_summary(message, state, start: date, end: date):
     if not anomalies:
         anomalies = await detect_anomalies(user_obj, start, end, months_back=2)
 
+    bal_emoji = "👍" if balance > 0 else "⚠️"
     caption_lines = [
-        f"Финансовый итог: {format_rub(balance)}",
+        f"{bal_emoji} Финансовый итог: {format_rub(balance)}",
         f"Доход: {format_rub(sum_income)}",
         f"Расход: {format_rub(sum_expense)}",
         "",

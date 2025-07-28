@@ -2,6 +2,17 @@ from datetime import date, timedelta
 from collections import defaultdict
 from aiobot.utils.formatting import format_rub
 from asgiref.sync import sync_to_async
+from core.models import CategoryLimit
+
+async def check_limit_exceed(user, category, total: float) -> str | None:
+    limit = await sync_to_async(CategoryLimit.objects.filter(user=user, category=category).first)()
+    if limit and total > float(limit.amount):
+        exceed_limit = total - float(limit.amount)
+        percent = (total - float(limit.amount)) / float(limit.amount) * 100
+        return (f"\n🔥 Превышение лимита по категории «{category.name}»: "
+                f"{format_rub(exceed_limit)} (лимит {format_rub(limit.amount)}, превышение {percent:.1f}%)")
+    return None
+
 
 async def detect_anomalies(
     user, current_start: date, current_end: date, months_back: int = 3
@@ -47,6 +58,6 @@ async def detect_anomalies(
             anomalies.append(
                 f"⚠️ Обратите внимание: расходы по категории «{cat_name}» "
                 f"в этом месяце {format_rub(current_value)} — выше среднего "
-                f"за прошлые месяцы на {percent:.1f}%."
+                f"чем за прошлые месяцы на {percent:.1f}%."
             )
     return anomalies

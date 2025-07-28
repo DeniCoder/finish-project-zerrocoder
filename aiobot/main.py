@@ -10,6 +10,7 @@ from handlers.income import register_income_handlers
 from handlers.history import register_history_handlers
 from handlers.summary import register_summary_handlers
 from handlers.charts import register_chart_handlers
+from handlers.setlimit import register_setlimit_handlers
 
 load_dotenv()
 API_TOKEN = os.getenv("API_TOKEN")
@@ -24,6 +25,7 @@ register_income_handlers(dp)
 register_history_handlers(dp)
 register_summary_handlers(dp)
 register_chart_handlers(dp)
+register_setlimit_handlers(dp)
 
 async def main():
     await dp.start_polling(bot)
