@@ -207,7 +207,12 @@ async def prepare_and_send_summary(message, state, start: date, end: date):
     if income_by_cat:
         big_income_cat, big_income_val = max(income_by_cat.items(), key=lambda x: x[1])
         income_share = big_income_val / sum_income * 100 if sum_income else 0
-        inc_text = f"🏆 Больше всего доходов по категории: \n{big_income_cat} — {format_rub(big_income_val)} ({income_share:.1f}% всех доходов)."
+        big_income_cat_obj = await sync_to_async(Category.objects.get)(name=big_income_cat, is_income=True)
+        limit_str = await check_limit_exceed(user_obj, big_income_cat_obj, big_income_val, period_type)
+        inc_emoji = "⚠️" if limit_str else "🏆"
+        inc_text = f"{inc_emoji} Больше всего доходов по категории: \n{big_income_cat} — {format_rub(big_income_val)} ({income_share:.1f}% всех доходов)."
+        if limit_str:
+            inc_text += f"\n{limit_str}"
     else:
         inc_text = "В выбранном периоде не было доходов."
     if expense_by_cat:

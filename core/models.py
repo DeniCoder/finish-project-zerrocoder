@@ -29,8 +29,8 @@ class Transaction(models.Model):
     Liskov Substitution: любой Transaction заменяем частью кода,
     ожидающей базовый тип models.Model.
     """
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    category = models.ForeignKey(Category, on_delete=models.PROTECT)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    category = models.ForeignKey('Category', on_delete=models.PROTECT)
     amount = models.DecimalField(_("Сумма"), max_digits=10, decimal_places=2)
     date = models.DateField(_("Дата операции"))
     description = models.TextField(_("Описание"), blank=True)

@@ -74,9 +74,22 @@ async def setlimit_amount(message: types.Message, state: FSMContext):
     user = await sync_to_async(User.objects.get)(username=str(message.from_user.id))
     category = await sync_to_async(Category.objects.get)(id=data["category_id"])
     period_type = data["period_type"]
+    # Проверяем, есть ли уже лимит для данной связки
+    prev_limit = await sync_to_async(CategoryLimit.objects.filter(
+        user=user, category=category, period_type=period_type
+    ).first)()
+    updated = prev_limit is not None
     limit, _ = await sync_to_async(CategoryLimit.objects.update_or_create)(
         user=user, category=category, period_type=period_type, defaults={"amount": amount})
-    await message.answer(f"Лимит {format_rub(amount)} установлен для категории «{category.name}».")
+    if updated:
+        await message.answer(
+            f"🔄 Лимит по категории «{category.name}» за {limit.get_period_type_display().lower()} обновлён: "
+            f"было {format_rub(prev_limit.amount)} руб., стало {format_rub(amount)} руб."
+        )
+    else:
+        await message.answer(
+            f"✅ Лимит {format_rub(amount)} руб. установлен для категории «{category.name}» за {limit.get_period_type_display().lower()}."
+        )
     await state.clear()
 
 def register_setlimit_handlers(dp):

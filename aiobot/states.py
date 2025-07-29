@@ -48,3 +48,10 @@ class SetLimitStates(StatesGroup):
     waiting_for_category = State()
     waiting_for_period_type = State()
     waiting_for_amount = State()
+
+# FSM-состояния для удаления лимита
+class DeleteLimitStates(StatesGroup):
+    waiting_for_category_type = State()
+    waiting_for_category = State()
+    waiting_for_period_type = State()
+    confirming = State()
