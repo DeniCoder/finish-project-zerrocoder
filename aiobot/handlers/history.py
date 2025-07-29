@@ -1,3 +1,8 @@
+"""
+Выводит отчет об операциях за произвольный период,
+добавляет в отчет предупреждения о превышении лимита и аномальных тратах.
+"""
+
 from aiogram import Router, types, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
@@ -7,6 +12,8 @@ from aiobot.utils.datetime_formats import WEEKDAYS_RU
 from datetime import date, datetime, timedelta
 from asgiref.sync import sync_to_async
 from aiobot.utils.anomalies import detect_anomalies, check_limit_exceed
+from core.models import Transaction, Category
+from django.contrib.auth.models import User
 
 router = Router()
 
@@ -48,7 +55,7 @@ async def history_category_type(message: types.Message, state: FSMContext):
         return
     is_income = choice == "2"
     await state.update_data(is_income=is_income)
-    from core.models import Category
+
     categories = await sync_to_async(list)(Category.objects.filter(is_income=is_income))
     if not categories:
         await message.answer("Нет категорий выбранного типа.")
@@ -148,9 +155,6 @@ async def history_year(message: types.Message, state: FSMContext):
     await show_history_result(message, state, start, end)
 
 async def show_history_result(message, state, start: date, end: date):
-    from core.models import Transaction, Category
-    from django.contrib.auth.models import User
-
     user_id = message.from_user.id
     try:
         user_obj = await sync_to_async(User.objects.get)(username=str(user_id))
@@ -187,8 +191,20 @@ async def show_history_result(message, state, start: date, end: date):
             lines.append(f"{weekday} {d.strftime('%d.%m.%Y')}:")
             lines.extend(grouped[d])
         total = sum(float(t.amount) for t in transactions)
+
         label = "Доход" if category.is_income else "Расход"
         lines.append(f"\n{label} по категории: {format_rub(total)}")
+
+        # Проверка лимитов
+        limit_msgs = []
+        for pt in ("day", "month", "year"):
+            limit_str = await check_limit_exceed(user_obj, category, total, pt)
+            if limit_str:
+                limit_msgs.append(limit_str)
+        if limit_msgs:
+            lines.extend(limit_msgs)
+
+        # Проверка аномалий
         anomalies = await detect_anomalies(user_obj, start, end)
         if not anomalies:
             anomalies = await detect_anomalies(user_obj, start, end, months_back=2)
@@ -223,6 +239,20 @@ async def show_history_result(message, state, start: date, end: date):
         lines.append(f"\nДоход: {format_rub(sum_income)}")
         lines.append(f"Расход: {format_rub(sum_expense)}")
         lines.append(f"Баланс: {format_rub(balance)}")
+
+        # Проверка лимитов
+        categories = set(t.category for t in transactions)
+        limit_blocks = []
+        for cat in categories:
+            total = sum(float(t.amount) for t in transactions if t.category == cat)
+            for pt in ("day", "month", "year"):
+                limit_str = await check_limit_exceed(user_obj, cat, total, pt)
+                if limit_str:
+                    limit_blocks.append(limit_str)
+        if limit_blocks:
+            lines.extend(limit_blocks)
+
+        # Проверка аномалий
         anomalies = await detect_anomalies(user_obj, start, end)
         if not anomalies:
             anomalies = await detect_anomalies(user_obj, start, end, months_back=2)

@@ -1,3 +1,8 @@
+"""
+Строит столбчатую диаграмму доходов и расходов за произвольный период,
+добавляет в caption предупреждения о превышении лимита и аномальных тратах.
+"""
+
 from aiogram import Router, types, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
@@ -10,6 +15,8 @@ from collections import defaultdict
 from aiobot.states import SummaryStates
 from aiobot.utils.formatting import format_rub
 from aiobot.utils.anomalies import detect_anomalies, check_limit_exceed
+from core.models import Transaction, Category
+from django.contrib.auth.models import User
 
 
 router = Router()
@@ -105,9 +112,6 @@ async def summary_year(message: types.Message, state: FSMContext):
     await prepare_and_send_summary(message, state, start, end)
 
 async def prepare_and_send_summary(message, state, start: date, end: date):
-    from core.models import Transaction, Category
-    from django.contrib.auth.models import User
-
     user_id = message.from_user.id
     try:
         user_obj = await sync_to_async(User.objects.get)(username=str(user_id))
@@ -175,7 +179,6 @@ async def prepare_and_send_summary(message, state, start: date, end: date):
             )
             bottom += v
 
-
     ax.set_xlim(-0.3, 1.3)
 
     ax.set_xticks(range(len(groups)))
@@ -195,44 +198,55 @@ async def prepare_and_send_summary(message, state, start: date, end: date):
             seen.add(l)
     ax.legend([h for h, _ in custom], [l for _, l in custom], loc="upper right")
 
-    # Сохраняем картинку и отправляем пользователю
+    # Сохраняем картинку для отправки пользователю
     with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmpfile:
         plt.tight_layout()
         plt.savefig(tmpfile.name, bbox_inches='tight')
         plt.close()
-        plot_file = FSInputFile(tmpfile.name)
         file_path = tmpfile.name
+        plot_file = FSInputFile(tmpfile.name)
 
-    # Определяем крупнейшие категории и их долю
+    # Определяем доходы, долю по категориям, крупнейшую категорию, превышение лимита
     if income_by_cat:
         big_income_cat, big_income_val = max(income_by_cat.items(), key=lambda x: x[1])
         income_share = big_income_val / sum_income * 100 if sum_income else 0
         big_income_cat_obj = await sync_to_async(Category.objects.get)(name=big_income_cat, is_income=True)
-        limit_str = await check_limit_exceed(user_obj, big_income_cat_obj, big_income_val, period_type)
-        inc_emoji = "⚠️" if limit_str else "🏆"
-        inc_text = f"{inc_emoji} Больше всего доходов по категории: \n{big_income_cat} — {format_rub(big_income_val)} ({income_share:.1f}% всех доходов)."
-        if limit_str:
-            inc_text += f"\n{limit_str}"
+        # Проверяем лимиты по всем периодам отдельно (день, месяц, год)
+        income_limit_strs = []
+        for pt in ("day", "month", "year"):
+            limit_str = await check_limit_exceed(user_obj, big_income_cat_obj, big_income_val, pt)
+            if limit_str:
+                income_limit_strs.append(limit_str)
+        inc_emoji = "⚠️" if income_limit_strs else "🏆"
+        inc_text = (f"{inc_emoji} Больше всего доходов по категории: \n"
+                    f"{big_income_cat} — {format_rub(big_income_val)} ({income_share:.1f}% всех доходов).")
+        if income_limit_strs:
+            for s in income_limit_strs:
+                inc_text += f"\n{s}"
     else:
         inc_text = "В выбранном периоде не было доходов."
+
+    # Определяем расходы, долю по категориям, крупнейшую категорию, превышение лимита
     if expense_by_cat:
         big_exp_cat, big_exp_val = max(expense_by_cat.items(), key=lambda x: x[1])
         exp_share = big_exp_val / sum_expense * 100 if sum_expense else 0
-        # Получаем объект категории по имени
         big_exp_cat_obj = await sync_to_async(Category.objects.get)(name=big_exp_cat, is_income=False)
-        limit_str = await check_limit_exceed(user_obj, big_exp_cat_obj, big_exp_val, period_type)
-        exp_emoji = "⚠️" if limit_str else "🏆"
-        exp_text = f"{exp_emoji} Больше всего расходов по категории: \n{big_exp_cat} — {format_rub(big_exp_val)} ({exp_share:.1f}% всех расходов)."
-        if limit_str:
-            exp_text += f"\n{limit_str}"
+        # Проверяем лимиты по всем периодам отдельно (день, месяц, год)
+        exp_limit_strs = []
+        for pt in ("day", "month", "year"):
+            limit_str = await check_limit_exceed(user_obj, big_exp_cat_obj, big_exp_val, pt)
+            if limit_str:
+                exp_limit_strs.append(limit_str)
+        exp_emoji = "⚠️" if exp_limit_strs else "🏆"
+        exp_text = (f"{exp_emoji} Больше всего расходов по категории: \n"
+                    f"{big_exp_cat} — {format_rub(big_exp_val)} ({exp_share:.1f}% всех расходов).")
+        if exp_limit_strs:
+            for s in exp_limit_strs:
+                exp_text += f"\n{s}"
     else:
         exp_text = "В выбранном периоде не было расходов."
 
-    now = datetime.now().strftime("%d.%m.%Y, %H:%M")
-    anomalies = await detect_anomalies(user_obj, start, end)
-    if not anomalies:
-        anomalies = await detect_anomalies(user_obj, start, end, months_back=2)
-
+    # Собираем подпись к картинке с аналитикой
     bal_emoji = "👍" if balance > 0 else "⚠️"
     caption_lines = [
         f"{bal_emoji} Финансовый итог: {format_rub(balance)}",
@@ -243,21 +257,27 @@ async def prepare_and_send_summary(message, state, start: date, end: date):
         exp_text,
     ]
 
-    # Вставляем советы, если есть аномалии
+    # Вставляем предупреждение о наличии превышения расходов
+    anomalies = await detect_anomalies(user_obj, start, end)
+    if not anomalies:
+        anomalies = await detect_anomalies(user_obj, start, end, months_back=2)
     if anomalies:
         caption_lines.append("\n🧐 Аналитика:")
         caption_lines.extend(anomalies)
 
+    # Добавляем дату предоставления данных
+    now = datetime.now().strftime("%d.%m.%Y, %H:%M")
     caption_lines.append(f"Данные предоставлены: {now}")
+
     caption = "\n".join(caption_lines)
 
+    # Отправляем картинку с подписью
     await message.answer_photo(plot_file, caption=caption)
     await asyncio.sleep(0.2)
     try:
         os.unlink(file_path)
     except PermissionError:
         pass
-
     await state.clear()
 
 def register_summary_handlers(dp):

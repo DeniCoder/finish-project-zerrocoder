@@ -2,9 +2,13 @@ from datetime import date, timedelta
 from collections import defaultdict
 from aiobot.utils.formatting import format_rub
 from asgiref.sync import sync_to_async
-from core.models import CategoryLimit
+from core.models import Transaction, CategoryLimit
 
 async def check_limit_exceed(user, category, total: float, period_type: str) -> str | None:
+    """
+    Создает предупреждение о превышении доходов / расходов установленных лимитов по категориям
+    на день, месяц, год.
+    """
     limit = await sync_to_async(CategoryLimit.objects.filter(
         user=user, category=category, period_type=period_type).first)()
     if limit and total > float(limit.amount):
@@ -20,10 +24,9 @@ async def detect_anomalies(
     user, current_start: date, current_end: date, months_back: int = 3
 ) -> list[str]:
     """
-    Генерирует список советов по аномалиям расходов по категориям.
+    Создает предупреждение о превышении расходов по категориям, если расходы
+    превышают среднее расходы за последние 2-3 месяца.
     """
-    from core.models import Transaction, Category
-
     # Получаем расходы за текущий месяц
     current_transactions = await sync_to_async(list)(
         Transaction.objects

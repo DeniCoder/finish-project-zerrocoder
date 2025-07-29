@@ -1,3 +1,8 @@
+"""
+Строит круговую диаграмму или расходов, или доходов за произвольный период,
+добавляет в caption предупреждения о превышении лимита и аномальных тратах.
+"""
+
 from aiogram import Router, types, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
@@ -9,12 +14,15 @@ from asgiref.sync import sync_to_async
 from collections import defaultdict
 from aiobot.states import ChartStates
 from aiobot.utils.formatting import format_rub
+from core.models import Transaction, Category
+from django.contrib.auth.models import User
+from aiobot.utils.anomalies import check_limit_exceed, detect_anomalies
+import django
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../../")
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "fincontrol.settings")
-import django
+
 django.setup()
-from core.models import Transaction
 
 router = Router()
 
@@ -119,7 +127,7 @@ async def draw_chart(message: types.Message, state: FSMContext, start: date, end
     data = await state.get_data()
     is_income = data["is_income"]
     user_id = message.from_user.id
-    from django.contrib.auth.models import User
+
     try:
         user_obj = await sync_to_async(User.objects.get)(username=str(user_id))
     except User.DoesNotExist:
@@ -157,22 +165,50 @@ async def draw_chart(message: types.Message, state: FSMContext, start: date, end
     plt.title(title_str)
 
     sum_amount = sum(by_cat.values())
-    caption_lines = [f"{name}: {format_rub(v)}" for name, v in sorted_items]
-    now = datetime.now().strftime("%d.%m.%Y, %H:%M")
-    caption = (
-            f"{diag_title} всего: {format_rub(sum_amount)}\n"
-            + "\n".join(caption_lines)
-            + f"\nДанные предоставлены: {now}"
-    )
 
+    # Проверка на превышение лимита
+    limit_msgs = []
+    for name, v in sorted_items:
+        # Поиск объекта категории:
+        cat_obj = await sync_to_async(Category.objects.get)(name=name, is_income=is_income)
+        for pt in ("day", "month", "year"):
+            limit_str = await check_limit_exceed(user_obj, cat_obj, v, pt)
+            if limit_str:
+                limit_msgs.append(limit_str)
+
+    # Проверка на наличие аномалий
+    anomaly_msgs = []
+    anomalies = await detect_anomalies(user_obj, start, end)
+    if not anomalies:
+        anomalies = await detect_anomalies(user_obj, start, end, months_back=2)
+    if anomalies:
+        anomaly_msgs.append("\n🧐 Аналитика:")
+        anomaly_msgs.extend(anomalies)
+
+    # Собираем подпись к картинке с аналитикой
+    caption_lines = [f"{diag_title} всего: {format_rub(sum_amount)}"]
+    caption_lines.extend(f"{name}: {format_rub(v)}" for name, v in sorted_items)
+    if limit_msgs:
+        caption_lines.extend(limit_msgs)
+    if anomaly_msgs:
+        caption_lines.extend(anomaly_msgs)
+
+    # Добавляем дату предоставления данных
+    now = datetime.now().strftime("%d.%m.%Y, %H:%M")
+    caption_lines.append(f"Время получения информации: {now}")
+
+    caption = "\n".join(caption_lines)
+
+    # Сохраняем картинку для отправки пользователю
     with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmpfile:
+        plt.tight_layout()
         plt.savefig(tmpfile.name, bbox_inches='tight')
         plt.close()
         file_path = tmpfile.name
+        plot_file = FSInputFile(file_path)
 
-    plot_file = FSInputFile(file_path)
+    # Отправляем картинку с подписью
     await message.answer_photo(plot_file, caption=caption)
-
     await asyncio.sleep(0.2)
     try:
         os.unlink(file_path)
