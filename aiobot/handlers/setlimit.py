@@ -1,9 +1,11 @@
+from aiobot.states import SetLimitStates
+from aiobot.utils.formatting import format_rub
 from aiogram import Router, types, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from aiobot.states import SetLimitStates
-from aiobot.utils.formatting import format_rub
 from asgiref.sync import sync_to_async
+from core.models import Category, CategoryLimit
+from django.contrib.auth.models import User
 
 router = Router()
 
@@ -24,7 +26,7 @@ async def setlimit_category_type(message: types.Message, state: FSMContext):
         await message.answer("Пожалуйста, введите 1 (расходные) или 2 (доходные).")
         return
     is_income = choice == "2"
-    from core.models import Category
+
     categories = await sync_to_async(list)(Category.objects.filter(is_income=is_income))
     if not categories:
         await message.answer("Нет категорий выбранного типа.")
@@ -61,8 +63,6 @@ async def setlimit_period_select(message: types.Message, state: FSMContext):
 
 @router.message(SetLimitStates.waiting_for_amount)
 async def setlimit_amount(message: types.Message, state: FSMContext):
-    from core.models import Category, CategoryLimit
-    from django.contrib.auth.models import User
     data = await state.get_data()
     try:
         amount = float(message.text.replace(' ', '').replace(',', '.'))

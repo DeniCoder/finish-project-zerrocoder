@@ -1,8 +1,8 @@
-from datetime import date, timedelta
-from collections import defaultdict
 from aiobot.utils.formatting import format_rub
 from asgiref.sync import sync_to_async
+from collections import defaultdict
 from core.models import Transaction, CategoryLimit
+from datetime import date, timedelta
 
 async def check_limit_exceed(user, category, total: float, period_type: str) -> str | None:
     """

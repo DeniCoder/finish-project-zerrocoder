@@ -1,17 +1,20 @@
+import django
+import os, sys
+from aiobot.states import AddExpenseStates
 from aiogram import Router, types, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from aiobot.states import AddExpenseStates
-import os, sys
 from asgiref.sync import sync_to_async
+from core.models import Transaction, Category
+from datetime import datetime, date
+from django.contrib.auth.models import User
+
 
 # --- Django ORM подключаем ---
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../../")
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "fincontrol.settings")
-import django
+
 django.setup()
-from core.models import Transaction, Category
-from django.contrib.auth.models import User
 
 router = Router()
 
@@ -62,7 +65,6 @@ async def add_expense_category(message: types.Message, state: FSMContext):
 
 @router.message(AddExpenseStates.waiting_for_date)
 async def add_expense_date(message: types.Message, state: FSMContext):
-    from datetime import datetime, date
     text = message.text.lower().strip()
     if text in ["сегодня", "today"]:
         dt = date.today()

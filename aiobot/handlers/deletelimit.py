@@ -1,8 +1,10 @@
+from aiobot.states import DeleteLimitStates
 from aiogram import Router, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from aiobot.states import DeleteLimitStates
 from asgiref.sync import sync_to_async
+from django.contrib.auth.models import User
+from core.models import Category, CategoryLimit
 
 router = Router()
 
@@ -18,7 +20,6 @@ async def del_limit_cat_type(message: types.Message, state: FSMContext):
         await message.answer("Пожалуйста, введите 1 (расходные) или 2 (доходные).")
         return
     is_income = choice == "2"
-    from core.models import Category
     categories = await sync_to_async(list)(Category.objects.filter(is_income=is_income))
     if not categories:
         await message.answer("Для этого типа категорий лимитов нет.")
@@ -52,8 +53,6 @@ async def del_limit_period(message: types.Message, state: FSMContext):
         await message.answer("Выберите: 1 (день), 2 (месяц), 3 (год).")
         return
     await state.update_data(period_type=periods[choice])
-    from core.models import CategoryLimit, Category
-    from django.contrib.auth.models import User
     data = await state.get_data()
     user = await sync_to_async(User.objects.get)(username=str(message.from_user.id))
     category = await sync_to_async(Category.objects.get)(id=data["category_id"])
@@ -77,7 +76,6 @@ async def del_limit_confirm(message: types.Message, state: FSMContext):
         await message.answer("Удаление отменено.")
         await state.clear()
         return
-    from core.models import CategoryLimit
     data = await state.get_data()
     await sync_to_async(CategoryLimit.objects.filter(id=data["limit_id"]).delete)()
     await message.answer("Лимит удалён ✅")

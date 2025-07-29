@@ -3,21 +3,21 @@
 добавляет в caption предупреждения о превышении лимита и аномальных тратах.
 """
 
+import django
+import matplotlib.pyplot as plt
+import os, sys, tempfile, asyncio
+from aiobot.states import ChartStates
+from aiobot.utils.anomalies import check_limit_exceed, detect_anomalies
+from aiobot.utils.formatting import format_rub
 from aiogram import Router, types, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import FSInputFile
-from datetime import date, datetime, timedelta
-import matplotlib.pyplot as plt
-import os, sys, tempfile, asyncio
 from asgiref.sync import sync_to_async
 from collections import defaultdict
-from aiobot.states import ChartStates
-from aiobot.utils.formatting import format_rub
 from core.models import Transaction, Category
+from datetime import date, datetime, timedelta
 from django.contrib.auth.models import User
-from aiobot.utils.anomalies import check_limit_exceed, detect_anomalies
-import django
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../../")
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "fincontrol.settings")

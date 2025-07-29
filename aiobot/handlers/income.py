@@ -1,16 +1,17 @@
+import django
+import os, sys
+from aiobot.states import AddIncomeStates
 from aiogram import Router, types, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from aiobot.states import AddIncomeStates
-import os, sys
 from asgiref.sync import sync_to_async
+from core.models import Transaction, Category
+from django.contrib.auth.models import User
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../../")
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "fincontrol.settings")
-import django
+
 django.setup()
-from core.models import Transaction, Category
-from django.contrib.auth.models import User
 
 router = Router()
 

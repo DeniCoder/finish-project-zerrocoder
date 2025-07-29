@@ -3,19 +3,19 @@
 добавляет в caption предупреждения о превышении лимита и аномальных тратах.
 """
 
+import matplotlib.pyplot as plt
+import os, tempfile, asyncio
+from aiobot.states import SummaryStates
+from aiobot.utils.anomalies import detect_anomalies, check_limit_exceed
+from aiobot.utils.formatting import format_rub
 from aiogram import Router, types, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import FSInputFile
-from datetime import date, datetime, timedelta
-import os, tempfile, asyncio
 from asgiref.sync import sync_to_async
-import matplotlib.pyplot as plt
 from collections import defaultdict
-from aiobot.states import SummaryStates
-from aiobot.utils.formatting import format_rub
-from aiobot.utils.anomalies import detect_anomalies, check_limit_exceed
 from core.models import Transaction, Category
+from datetime import date, datetime, timedelta
 from django.contrib.auth.models import User
 
 
