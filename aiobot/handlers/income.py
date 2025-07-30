@@ -40,11 +40,15 @@ async def add_income_amount(message: types.Message, state: FSMContext):
         await state.clear()
         return
 
-    num_to_id = {str(i+1): cat.id for i, cat in enumerate(categories)}
-    cat_lines = [f"{i+1}. {cat.name}" for i, cat in enumerate(categories)]
-    await state.update_data(category_choices=num_to_id)
+    cat_names = [cat.name for cat in categories]
+    await state.update_data(category_choices={cat.name: cat.id for cat in categories})
     await state.set_state(AddIncomeStates.waiting_for_category)
-    await message.answer("Выберите категорию (цифра):\n" + "\n".join(cat_lines))
+    from aiobot.utils.menu import build_categories_menu
+    await message.answer(
+        "Выберите категорию дохода:",
+        reply_markup=build_categories_menu(cat_names)
+    )
+
 
 @router.message(AddIncomeStates.waiting_for_category)
 async def add_income_category(message: types.Message, state: FSMContext):
@@ -102,6 +106,21 @@ async def add_income_description(message: types.Message, state: FSMContext):
         await message.answer(f"Ошибка добавления дохода: {e}")
     finally:
         await state.clear()
+
+@router.callback_query(F.data.startswith("category_"), AddIncomeStates.waiting_for_category)
+async def callback_income_category(query: types.CallbackQuery, state: FSMContext):
+    cat_name = query.data.replace("category_", "")
+    data = await state.get_data()
+    category_choices = data.get("category_choices", {})
+    category_id = category_choices.get(cat_name)
+    if not category_id:
+        await query.answer("Ошибка выбора категории.")
+        return
+    await state.update_data(category_id=category_id)
+    await state.set_state(AddIncomeStates.waiting_for_date)
+    await query.message.answer("Укажите дату дохода в формате ДД.ММ.ГГГГ (или 'сегодня'):")
+    await query.answer()
+
 
 def register_income_handlers(dp):
     dp.include_router(router)
