@@ -1,56 +1,66 @@
-from aiogram.fsm.state import State, StatesGroup
+from aiogram.fsm.state import StatesGroup, State
 
-# FSM-состояния для добавления расхода
+class SelectPeriodStates(StatesGroup):
+    """
+    Универсальные состояния для диалогов по выбору периода и дат.
+    """
+    waiting_for_period_type = State()
+    waiting_for_day = State()
+    waiting_for_range = State()
+    waiting_for_month = State()
+    waiting_for_year = State()
+
 class AddExpenseStates(StatesGroup):
+    """
+    Сценарий создания расхода.
+    """
     waiting_for_amount = State()
     waiting_for_category = State()
     waiting_for_date = State()
     waiting_for_description = State()
 
-# FSM-состояния для добавления дохода
 class AddIncomeStates(StatesGroup):
+    """
+    Сценарий создания дохода.
+    """
     waiting_for_amount = State()
     waiting_for_category = State()
     waiting_for_date = State()
     waiting_for_description = State()
 
-# FSM-состояния периода и категории для получения операций
-class HistoryStates(StatesGroup):
+class HistoryStates(SelectPeriodStates):
+    """
+    Сценарии просмотра истории операций.
+    """
     waiting_for_scope = State()
     waiting_for_category_type = State()
     waiting_for_category = State()
-    waiting_for_period_type = State()
-    waiting_for_day = State()
-    waiting_for_range = State()
-    waiting_for_month = State()
-    waiting_for_year = State()
 
-# FSM-состояния периода для круговой диаграммы
-class ChartStates(StatesGroup):
+class ChartStates(SelectPeriodStates):
+    """
+    Сценарии построения диаграмм.
+    """
     waiting_for_type = State()
-    waiting_for_period_type = State()
-    waiting_for_day = State()
-    waiting_for_range = State()
-    waiting_for_month = State()
-    waiting_for_year = State()
 
-# FSM-состояния периода для столбчатой диаграммы и статистики
-class SummaryStates(StatesGroup):
-    waiting_for_period_type = State()
-    waiting_for_day = State()
-    waiting_for_range = State()
-    waiting_for_month = State()
-    waiting_for_year = State()
+class SummaryStates(SelectPeriodStates):
+    """
+    Сценарии получения сводной статистики.
+    """
+    pass
 
-# FSM-состояния для задания лимита
 class SetLimitStates(StatesGroup):
+    """
+    Сценарии добавления или редактирования лимитов.
+    """
     waiting_for_category_type = State()
     waiting_for_category = State()
     waiting_for_period_type = State()
     waiting_for_amount = State()
 
-# FSM-состояния для удаления лимита
 class DeleteLimitStates(StatesGroup):
+    """
+    Сценарии удаления лимитов.
+    """
     waiting_for_category_type = State()
     waiting_for_category = State()
     waiting_for_period_type = State()
