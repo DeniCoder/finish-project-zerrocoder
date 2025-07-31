@@ -26,7 +26,7 @@ from handlers.history import register_history_handlers
 from handlers.summary import register_summary_handlers
 from handlers.charts import register_chart_handlers
 from handlers.limits import register_limit_handlers
-from handlers.deletelimit import register_del_limit_handlers
+
 
 # ====== Загрузка переменных окружения ======
 load_dotenv()
