@@ -48,3 +48,10 @@ class DeleteLimitStates(StatesGroup):
     waiting_for_category = State()
     waiting_for_period_type = State()
     confirming = State()
+
+class LimitStates(StatesGroup):
+    main = State()
+    choose_category = State()
+    choose_period = State()
+    enter_amount = State()
+    confirm_delete = State()
