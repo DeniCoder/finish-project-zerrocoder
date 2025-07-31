@@ -23,6 +23,8 @@ from aiobot.utils.emojis import (
     TODAY_EMOJI,
     MONTH_EMOJI,
     YEAR_EMOJI,
+    CONFIRM_EMOJI,
+    CANCEL_EMOJI,
     category_emoji,
 )
 
@@ -55,7 +57,7 @@ def build_limits_main_menu() -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text=f"{FIRE_EMOJI} Установить лимит", callback_data="set_limit")],
         [InlineKeyboardButton(text=f"{LIST_EMOJI} Посмотреть лимиты", callback_data="view_limits")],
         [InlineKeyboardButton(text=f"{DELETE_EMOJI} Удалить лимит", callback_data="delete_limit")],
-        [InlineKeyboardButton(text=f"{BACK_EMOJI} Назад", callback_data="back")],
+        #[InlineKeyboardButton(text=f"{BACK_EMOJI} Назад", callback_data="back")],
     ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
@@ -123,3 +125,16 @@ def build_category_menu(categories: List, prefix: str, back_callback: Optional[s
     else:
         keyboard.append([InlineKeyboardButton(text=f"{BACK_EMOJI} Назад", callback_data="back")])
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+def build_confirm_menu(yes_cb: str = "confirm_yes", no_cb: str = "confirm_no") -> InlineKeyboardMarkup:
+    """
+    Инлайн-клавиатура для подтверждения действий с кнопками 'Да' и 'Нет'.
+    :param yes_cb: callback_data для 'Да'
+    :param no_cb: callback_data для 'Нет'
+    """
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text=f"{CONFIRM_EMOJI} Да", callback_data=yes_cb),
+            InlineKeyboardButton(text=f"{CANCEL_EMOJI} Нет", callback_data=no_cb),
+        ]
+    ])

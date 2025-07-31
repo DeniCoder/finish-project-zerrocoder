@@ -6,9 +6,11 @@ from aiobot.utils.menu import (
     build_type_menu,
     build_period_menu,
     build_category_menu,
+    build_confirm_menu
 )
 from aiobot.utils.emojis import (
     OK_EMOJI,
+    FIRE_EMOJI,
     TRANSFER_EMOJI,
     category_emoji,
 )
@@ -20,7 +22,7 @@ from django.contrib.auth.models import User
 router = Router()
 
 @router.message(Command("limits"))
-@router.message(F.text == "🔥 Лимиты")
+@router.message(F.text == f"{FIRE_EMOJI} Лимиты")
 async def limits_entry(message: types.Message, state: FSMContext):
     """
     Точка входа для управления лимитами: /limits или кнопка "Лимиты" в reply-меню.
@@ -39,8 +41,7 @@ async def set_limit_type(query: types.CallbackQuery, state: FSMContext):
     await query.message.edit_text("Для каких категорий хотите задать лимит?", reply_markup=build_type_menu())
     await query.answer()
 
-@router.callback_query(F.data == "limit_type_expense", SetLimitStates.waiting_for_category_type)
-@router.callback_query(F.data == "limit_type_income", SetLimitStates.waiting_for_category_type)
+@router.callback_query(lambda c: c.data.startswith("limit_type_"), SetLimitStates.waiting_for_category_type)
 async def set_limit_category(query: types.CallbackQuery, state: FSMContext):
     is_income = query.data.endswith("income")
     await state.update_data(is_income=is_income)
@@ -49,7 +50,7 @@ async def set_limit_category(query: types.CallbackQuery, state: FSMContext):
         await query.message.edit_text("Нет доступных категорий!", reply_markup=build_limits_main_menu())
         await state.clear()
         return
-    menu = await build_category_menu(categories, prefix="setlimit_cat")
+    menu = build_category_menu(categories, prefix="setlimit_cat")
     await state.set_state(SetLimitStates.waiting_for_category)
     await query.message.edit_text("Выберите категорию:", reply_markup=menu)
     await query.answer()
@@ -101,8 +102,9 @@ async def set_limit_amount(message: types.Message, state: FSMContext):
 async def show_limits(query: types.CallbackQuery, state: FSMContext):
     user = await sync_to_async(User.objects.get)(username=str(query.from_user.id))
     limits = await sync_to_async(list)(CategoryLimit.objects.filter(user=user).select_related("category"))
+    text: str
     if not limits:
-        await query.message.edit_text("У вас нет активных лимитов.", reply_markup=build_limits_main_menu())
+        text = "У вас нет активных лимитов."
     else:
         blocks = []
         for l in limits:
@@ -111,7 +113,13 @@ async def show_limits(query: types.CallbackQuery, state: FSMContext):
                 f"{ctg_emoji} <b>{l.category.name}</b> ({'доход' if l.category.is_income else 'расход'}) "
                 f"— {l.get_period_type_display()}: <b>{l.amount} руб.</b>"
             )
-        await query.message.edit_text("Текущие лимиты:\n" + "\n".join(blocks), parse_mode="HTML", reply_markup=build_limits_main_menu())
+        text = "Текущие лимиты:\n" + "\n".join(blocks)
+    # Проверка: если текст совпадает с текущим — не вызываем edit_text
+    if query.message.text == text:
+        await query.answer("Нет новых данных.")
+        await state.clear()
+        return
+    await query.message.edit_text(text, parse_mode="HTML", reply_markup=build_limits_main_menu())
     await state.clear()
     await query.answer()
 
@@ -122,8 +130,7 @@ async def del_limit_type(query: types.CallbackQuery, state: FSMContext):
     await query.message.edit_text("Лимит по какой категории удалить?", reply_markup=build_type_menu())
     await query.answer()
 
-@router.callback_query(F.data == "limit_type_expense", DeleteLimitStates.waiting_for_category_type)
-@router.callback_query(F.data == "limit_type_income", DeleteLimitStates.waiting_for_category_type)
+@router.callback_query(lambda c: c.data.startswith("limit_type_"), DeleteLimitStates.waiting_for_category_type)
 async def del_limit_category(query: types.CallbackQuery, state: FSMContext):
     is_income = query.data.endswith("income")
     user = await sync_to_async(User.objects.get)(username=str(query.from_user.id))
@@ -134,11 +141,18 @@ async def del_limit_category(query: types.CallbackQuery, state: FSMContext):
         await query.message.edit_text("Нет лимитов для выбранного типа.", reply_markup=build_limits_main_menu())
         await state.clear()
         return
-    categories = [l.category for l in limits]
-    menu = await build_category_menu(categories, prefix="dellimit_cat")
+    # --- показываем только уникальные категории ---
+    unique_categories = {}
+    for limit in limits:
+        cat = limit.category
+        if cat.id not in unique_categories:
+            unique_categories[cat.id] = cat
+    categories = list(unique_categories.values())
+    menu = build_category_menu(categories, prefix="dellimit_cat")
     await state.set_state(DeleteLimitStates.waiting_for_category)
     await query.message.edit_text("Выберите категорию:", reply_markup=menu)
     await query.answer()
+
 
 @router.callback_query(lambda c: c.data.startswith("dellimit_cat_"), DeleteLimitStates.waiting_for_category)
 async def del_limit_period(query: types.CallbackQuery, state: FSMContext):
@@ -164,10 +178,28 @@ async def del_limit_confirm(query: types.CallbackQuery, state: FSMContext):
     await state.update_data(limit_id=limit.id)
     await state.set_state(DeleteLimitStates.confirming)
     await query.message.edit_text(
-        f"Удалить лимит {limit.amount} руб. для «{category.name}» за {limit.get_period_type_display()}?\n"
-        "Подтвердите: 'Да' — удалить / 'Нет' — отмена."
+        f"Удалить лимит {limit.amount} руб. для «{category.name}» за {limit.get_period_type_display()}?",
+        reply_markup=build_confirm_menu(
+            yes_cb=f"del_limit_yes_{limit.id}",
+            no_cb="del_limit_no"
+        )
     )
     await query.answer()
+
+@router.callback_query(lambda c: c.data.startswith("del_limit_yes_"), DeleteLimitStates.confirming)
+async def del_limit_do(query: types.CallbackQuery, state: FSMContext):
+    limit_id = int(query.data.replace("del_limit_yes_", ""))
+    await sync_to_async(CategoryLimit.objects.filter(id=limit_id).delete)()
+    await query.message.edit_text("Лимит удалён.", reply_markup=build_limits_main_menu())
+    await state.clear()
+    await query.answer()
+
+@router.callback_query(F.data == "del_limit_no", DeleteLimitStates.confirming)
+async def del_limit_cancel(query: types.CallbackQuery, state: FSMContext):
+    await query.message.edit_text("Удаление отменено.", reply_markup=build_limits_main_menu())
+    await state.clear()
+    await query.answer()
+
 
 @router.message(DeleteLimitStates.confirming)
 async def del_limit_do(message: types.Message, state: FSMContext):
