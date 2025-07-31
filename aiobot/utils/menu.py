@@ -4,9 +4,10 @@
 
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 from aiobot.utils.emojis import (
-    ADD_EMOJI, EXPENSE_EMOJI, INCOME_EMOJI, HISTORY_EMOJI, REPORT_EMOJI, FIRE_EMOJI,
-    MENU_EMOJI, SETTINGS_EMOJI
+    EXPENSE_EMOJI, INCOME_EMOJI, HISTORY_EMOJI, REPORT_EMOJI, FIRE_EMOJI,
+    SETTINGS_EMOJI, BACK_EMOJI, category_emoji
 )
+from typing import List, Tuple
 
 main_menu = ReplyKeyboardMarkup(
     keyboard=[
@@ -25,18 +26,6 @@ main_menu = ReplyKeyboardMarkup(
     one_time_keyboard=False,
 )
 
-def build_categories_menu(categories: list[str]) -> InlineKeyboardMarkup:
-    """Сформировать инлайн-меню для выбора категории — с автоподбором эмодзи."""
-    from aiobot.utils.emojis import category_emoji
-    buttons = [
-        InlineKeyboardButton(
-            text=f"{category_emoji(cat)} {cat}",
-            callback_data=f"category_{cat}"
-        ) for cat in categories
-    ]
-    menu = InlineKeyboardMarkup(inline_keyboard=[[btn] for btn in buttons])
-    return menu
-
 def build_period_menu() -> InlineKeyboardMarkup:
     """Сформировать инлайн-меню для выбора периода с эмодзи."""
     from aiobot.utils.emojis import TODAY_EMOJI, WEEK_EMOJI, MONTH_EMOJI, YEAR_EMOJI
@@ -49,3 +38,29 @@ def build_period_menu() -> InlineKeyboardMarkup:
     buttons = [InlineKeyboardButton(text=title, callback_data=code) for title, code in periods]
     menu = InlineKeyboardMarkup(inline_keyboard=[[btn] for btn in buttons])
     return menu
+
+async def build_category_menu(
+    categories: List[Tuple[str, str]],  # [(название категории, callback_data)]
+    back_callback: str = None,
+    columns: int = 2,
+) -> InlineKeyboardMarkup:
+    """
+    Собирает инлайн-меню выбора категории с эмодзи.
+    :param categories: пары (название без эмодзи, callback_data)
+    """
+    keyboard = []
+    row = []
+    for idx, (cat_name, code) in enumerate(categories, 1):
+        icon = category_emoji(cat_name)
+        text = f"{icon} {cat_name}".strip()
+        row.append(InlineKeyboardButton(text=text, callback_data=code))
+        if idx % columns == 0:
+            keyboard.append(row)
+            row = []
+    if row:
+        keyboard.append(row)
+    if back_callback:
+        keyboard.append(
+            [InlineKeyboardButton(text=f"{BACK_EMOJI} Назад", callback_data=back_callback)]
+        )
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)

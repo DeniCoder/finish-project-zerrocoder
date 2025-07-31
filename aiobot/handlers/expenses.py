@@ -43,27 +43,20 @@ async def add_expense_amount(message: types.Message, state: FSMContext):
         await state.clear()
         return
 
-    cat_names = [cat.name for cat in categories]
-    await state.update_data(category_choices={cat.name: cat.id for cat in categories})
+    from aiobot.utils.menu import build_category_menu
+    category_buttons = [(cat.name, f"catid_{cat.id}") for cat in categories]
+    await state.update_data(category_choices={f"catid_{cat.id}": cat.id for cat in categories})
     await state.set_state(AddExpenseStates.waiting_for_category)
-    from aiobot.utils.menu import build_categories_menu
-    await message.answer(
-        "Выберите категорию расхода:",
-        reply_markup=build_categories_menu(cat_names)
-    )
+    menu = await build_category_menu(category_buttons)
+    await message.answer("Выберите категорию расхода:", reply_markup=menu)
 
-@router.message(AddExpenseStates.waiting_for_category)
-async def add_expense_category(message: types.Message, state: FSMContext):
-    data = await state.get_data()
-    category_choices = data.get("category_choices", {})
-    cat_num = message.text.strip()
-    if cat_num not in category_choices:
-        await message.answer("Нет такой категории. Введите номер из списка.")
-        return
-
-    await state.update_data(category_id=category_choices[cat_num])
+@router.callback_query(lambda c: c.data.startswith("catid_"), AddExpenseStates.waiting_for_category)
+async def callback_expense_category(query: types.CallbackQuery, state: FSMContext):
+    category_id = int(query.data.replace("catid_", ""))
+    await state.update_data(category_id=category_id)
     await state.set_state(AddExpenseStates.waiting_for_date)
-    await message.answer("Укажите дату расхода в формате ДД.ММ.ГГГГ (или 'сегодня'):")
+    await query.message.answer("Укажите дату расхода в формате ДД.ММ.ГГГГ (или 'сегодня'):")
+    await query.answer()
 
 @router.message(AddExpenseStates.waiting_for_date)
 async def add_expense_date(message: types.Message, state: FSMContext):
@@ -107,21 +100,6 @@ async def add_expense_description(message: types.Message, state: FSMContext):
         await message.answer(f"Ошибка добавления расхода: {e}")
     finally:
         await state.clear()
-
-@router.callback_query(F.data.startswith("category_"), AddExpenseStates.waiting_for_category)
-async def callback_expense_category(query: types.CallbackQuery, state: FSMContext):
-    cat_name = query.data.replace("category_", "")
-    data = await state.get_data()
-    category_choices = data.get("category_choices", {})
-    category_id = category_choices.get(cat_name)
-    if not category_id:
-        await query.answer("Ошибка выбора категории.")
-        return
-    await state.update_data(category_id=category_id)
-    await state.set_state(AddExpenseStates.waiting_for_date)
-    await query.message.answer("Укажите дату расхода в формате ДД.ММ.ГГГГ (или 'сегодня'):")
-    await query.answer()
-
 
 def register_expense_handlers(dp):
     dp.include_router(router)
