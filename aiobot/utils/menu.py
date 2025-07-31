@@ -1,6 +1,4 @@
 """
-aiobot/utils/menu.py
-
 Генерация reply- и inline-клавиатур для Telegram-бота (на базе Aiogram).
 Все используемые эмодзи импортируются из aiobot.utils.emojis.
 """
@@ -20,8 +18,8 @@ from aiobot.utils.emojis import (
     FIRE_EMOJI,
     SETTINGS_EMOJI,
     BACK_EMOJI,
-    OK_EMOJI,
-    CANCEL_EMOJI,
+    LIST_EMOJI,
+    DELETE_EMOJI,
     TODAY_EMOJI,
     MONTH_EMOJI,
     YEAR_EMOJI,
@@ -55,8 +53,8 @@ def build_limits_main_menu() -> InlineKeyboardMarkup:
     """
     buttons = [
         [InlineKeyboardButton(text=f"{FIRE_EMOJI} Установить лимит", callback_data="set_limit")],
-        [InlineKeyboardButton(text=f"{OK_EMOJI} Посмотреть лимиты", callback_data="view_limits")],
-        [InlineKeyboardButton(text=f"{CANCEL_EMOJI} Удалить лимит", callback_data="delete_limit")],
+        [InlineKeyboardButton(text=f"{LIST_EMOJI} Посмотреть лимиты", callback_data="view_limits")],
+        [InlineKeyboardButton(text=f"{DELETE_EMOJI} Удалить лимит", callback_data="delete_limit")],
         [InlineKeyboardButton(text=f"{BACK_EMOJI} Назад", callback_data="back")],
     ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)

@@ -1,61 +1,36 @@
 from aiogram import Router, types, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiobot.utils.menu import (
+    build_limits_main_menu,
+    build_type_menu,
+    build_period_menu,
+    build_category_menu,
+)
+from aiobot.utils.emojis import (
+    OK_EMOJI,
+    TRANSFER_EMOJI,
+    category_emoji,
+)
 from aiobot.states import SetLimitStates, DeleteLimitStates
-from aiobot.utils.emojis import FIRE_EMOJI, OK_EMOJI, CANCEL_EMOJI, BACK_EMOJI, category_emoji
 from asgiref.sync import sync_to_async
 from core.models import Category, CategoryLimit
 from django.contrib.auth.models import User
 
 router = Router()
 
-def build_limits_main_menu():
-    buttons = [
-        [InlineKeyboardButton(text=f"{FIRE_EMOJI} Установить лимит", callback_data="set_limit")],
-        [InlineKeyboardButton(text=f"📋 Посмотреть лимиты", callback_data="view_limits")],
-        [InlineKeyboardButton(text=f"🗑️ Удалить лимит", callback_data="delete_limit")],
-        [InlineKeyboardButton(text=f"{BACK_EMOJI} Назад", callback_data="back")],
-    ]
-    return InlineKeyboardMarkup(inline_keyboard=buttons)
-
-def build_type_menu():
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(text="📉 Расходы", callback_data="limit_type_expense"),
-            InlineKeyboardButton(text="📈 Доходы", callback_data="limit_type_income")
-        ],
-        [InlineKeyboardButton(text=f"{BACK_EMOJI} Назад", callback_data="back")]
-    ])
-
-def build_period_menu():
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(text="⏱️ День", callback_data="period_day"),
-            InlineKeyboardButton(text="📅 Месяц", callback_data="period_month"),
-            InlineKeyboardButton(text="📈 Год", callback_data="period_year"),
-        ],
-        [InlineKeyboardButton(text=f"{BACK_EMOJI} Назад", callback_data="back")]
-    ])
-
-async def build_category_menu(categories, prefix):
-    keyboard = []
-    row = []
-    for idx, cat in enumerate(categories, 1):
-        text = f"{category_emoji(cat.name)} {cat.name}"
-        row.append(InlineKeyboardButton(text=text, callback_data=f"{prefix}_{cat.id}"))
-        if idx % 2 == 0:
-            keyboard.append(row)
-            row = []
-    if row:
-        keyboard.append(row)
-    keyboard.append([InlineKeyboardButton(text=f"{BACK_EMOJI} Назад", callback_data="back")])
-    return InlineKeyboardMarkup(inline_keyboard=keyboard)
-
 @router.message(Command("limits"))
+@router.message(F.text == "🔥 Лимиты")
 async def limits_entry(message: types.Message, state: FSMContext):
+    """
+    Точка входа для управления лимитами: /limits или кнопка "Лимиты" в reply-меню.
+    Показывает инлайн-кнопки для действий с лимитами.
+    """
     await state.clear()
-    await message.answer("Управление лимитами:", reply_markup=build_limits_main_menu())
+    await message.answer(
+        "Выберите действие с лимитами:",
+        reply_markup=build_limits_main_menu()
+    )
 
 @router.callback_query(F.data == "set_limit")
 async def set_limit_type(query: types.CallbackQuery, state: FSMContext):
@@ -116,9 +91,9 @@ async def set_limit_amount(message: types.Message, state: FSMContext):
         user=user, category=category, period_type=period_type, defaults={"amount": amount}
     )
     if updated:
-        msg = f"🔄 Лимит обновлён: {category.name} за {limit.get_period_type_display().lower()} теперь {amount} руб."
+        msg = f"{TRANSFER_EMOJI} Лимит обновлён: {category.name} за {limit.get_period_type_display().lower()} теперь {amount} руб."
     else:
-        msg = f"✅ Лимит установлен для {category.name} на {limit.get_period_type_display().lower()}: {amount} руб."
+        msg = f"{OK_EMOJI} Лимит установлен для {category.name} на {limit.get_period_type_display().lower()}: {amount} руб."
     await message.answer(msg, reply_markup=build_limits_main_menu())
     await state.clear()
 
