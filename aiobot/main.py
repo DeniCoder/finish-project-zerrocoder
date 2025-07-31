@@ -25,7 +25,7 @@ from handlers.income import register_income_handlers
 from handlers.history import register_history_handlers
 from handlers.summary import register_summary_handlers
 from handlers.charts import register_chart_handlers
-from handlers.setlimit import register_setlimit_handlers
+from handlers.limits import register_limit_handlers
 from handlers.deletelimit import register_del_limit_handlers
 
 # ====== Загрузка переменных окружения ======
@@ -50,8 +50,7 @@ register_income_handlers(dp)
 register_history_handlers(dp)
 register_summary_handlers(dp)
 register_chart_handlers(dp)
-register_setlimit_handlers(dp)
-register_del_limit_handlers(dp)
+register_limit_handlers(dp)
 register_start_handlers(dp)
 
 # ====== Основная точка входа ======
