@@ -61,22 +61,20 @@ async def history_category_type(message: types.Message, state: FSMContext):
         await message.answer("Нет категорий выбранного типа.")
         await state.clear()
         return
-    num_to_id = {str(i+1): cat.id for i, cat in enumerate(categories)}
-    lines = [f"{i+1}. {cat.name}" for i, cat in enumerate(categories)]
-    await state.update_data(category_choices=num_to_id)
+    from aiobot.utils.menu import build_category_menu
+    category_buttons = [(cat.name, f"catid_{cat.id}") for cat in categories]
+    await state.update_data(category_choices={f"catid_{cat.id}": cat.id for cat in categories})
     await state.set_state(HistoryStates.waiting_for_category)
-    await message.answer("Выберите номер категории:\n" + "\n".join(lines))
+    menu = await build_category_menu(category_buttons)
+    await message.answer("Выберите категорию:", reply_markup=menu)
 
-@router.message(HistoryStates.waiting_for_category)
-async def history_category_select(message: types.Message, state: FSMContext):
+@router.callback_query(lambda c: c.data.startswith("catid_"), HistoryStates.waiting_for_category)
+async def history_category_callback(query: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
-    num = message.text.strip()
-    category_choices = data["category_choices"]
-    if num not in category_choices:
-        await message.answer("Нет такой категории. Попробуйте еще раз.")
-        return
-    await state.update_data(category_id=category_choices[num])
-    await ask_period(message, state)
+    category_id = data["category_choices"][query.data]
+    await state.update_data(category_id=category_id)
+    await ask_period(query.message, state)
+    await query.answer()
 
 async def ask_period(message, state):
     await state.set_state(HistoryStates.waiting_for_period_type)

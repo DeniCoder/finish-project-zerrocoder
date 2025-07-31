@@ -32,23 +32,20 @@ async def setlimit_category_type(message: types.Message, state: FSMContext):
         await message.answer("Нет категорий выбранного типа.")
         await state.clear()
         return
-    num_to_id = {str(i+1): cat.id for i, cat in enumerate(categories)}
-    lines = [f"{i+1}. {cat.name}" for i, cat in enumerate(categories)]
-    await state.update_data(is_income=is_income, category_choices=num_to_id)
+    from aiobot.utils.menu import build_category_menu
+    category_buttons = [(cat.name, f"catid_{cat.id}") for cat in categories]
+    await state.update_data(is_income=is_income, category_choices={f"catid_{cat.id}": cat.id for cat in categories})
     await state.set_state(SetLimitStates.waiting_for_category)
-    await message.answer("Выберите номер категории:\n" + "\n".join(lines))
+    menu = await build_category_menu(category_buttons)
+    await message.answer("Выберите категорию:", reply_markup=menu)
 
-@router.message(SetLimitStates.waiting_for_category)
-async def setlimit_category_select(message: types.Message, state: FSMContext):
-    data = await state.get_data()
-    num = message.text.strip()
-    category_choices = data["category_choices"]
-    if num not in category_choices:
-        await message.answer("Нет такой категории. Попробуйте еще раз.")
-        return
-    await state.update_data(category_id=category_choices[num])
+@router.callback_query(lambda c: c.data.startswith("catid_"), SetLimitStates.waiting_for_category)
+async def setlimit_category_callback(query: types.CallbackQuery, state: FSMContext):
+    category_id = int(query.data.replace("catid_", ""))
+    await state.update_data(category_id=category_id)
     await state.set_state(SetLimitStates.waiting_for_period_type)
-    await message.answer("Для какого периода задать лимит?\n1. День\n2. Месяц\n3. Год\nВыберите цифру:")
+    await query.message.answer("Для какого периода задать лимит?\n1. День\n2. Месяц\n3. Год\nВыберите цифру:")
+    await query.answer()
 
 @router.message(SetLimitStates.waiting_for_period_type)
 async def setlimit_period_select(message: types.Message, state: FSMContext):
