@@ -7,6 +7,7 @@ from aiobot.states import HistoryStates
 from aiobot.utils.anomalies import detect_anomalies, check_limit_exceed
 from aiobot.utils.datetime_formats import WEEKDAYS_RU
 from aiobot.utils.formatting import format_rub
+from aiobot.utils.emojis import HISTORY_EMOJI
 from aiogram import Router, types, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
@@ -23,6 +24,7 @@ async def cancel_fsm(message: types.Message, state: FSMContext):
     await message.answer("Ввод отменён.")
 
 @router.message(Command("history"))
+@router.message(F.text == f"{HISTORY_EMOJI} История операций")
 async def history_scope(message: types.Message, state: FSMContext):
     await state.set_state(HistoryStates.waiting_for_scope)
     await message.answer(

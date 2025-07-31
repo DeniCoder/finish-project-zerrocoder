@@ -1,6 +1,8 @@
 import django
 import os, sys
 from aiobot.states import AddExpenseStates
+from aiobot.utils.emojis import EXPENSE_EMOJI
+from aiobot.utils.menu import build_category_menu
 from aiogram import Router, types, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
@@ -24,6 +26,7 @@ async def cancel_fsm(message: types.Message, state: FSMContext):
     await message.answer("Ввод отменён.")
 
 @router.message(Command("add_expense"))
+@router.message(F.text == f"{EXPENSE_EMOJI} Добавить расход")
 async def start_add_expense(message: types.Message, state: FSMContext):
     await state.set_state(AddExpenseStates.waiting_for_amount)
     await message.answer("Введите сумму расхода:")
@@ -43,16 +46,19 @@ async def add_expense_amount(message: types.Message, state: FSMContext):
         await state.clear()
         return
 
-    from aiobot.utils.menu import build_category_menu
-    category_buttons = [(cat.name, f"catid_{cat.id}") for cat in categories]
-    await state.update_data(category_choices={f"catid_{cat.id}": cat.id for cat in categories})
+    categories = await sync_to_async(list)(Category.objects.filter(is_income=False))
+    if not categories:
+        await message.answer("Категории расходов ещё не созданы.")
+        await state.clear()
+        return
+
     await state.set_state(AddExpenseStates.waiting_for_category)
-    menu = await build_category_menu(category_buttons)
+    menu = build_category_menu(categories, prefix="expense_cat")
     await message.answer("Выберите категорию расхода:", reply_markup=menu)
 
-@router.callback_query(lambda c: c.data.startswith("catid_"), AddExpenseStates.waiting_for_category)
+@router.callback_query(lambda c: c.data.startswith("expense_cat_"), AddExpenseStates.waiting_for_category)
 async def callback_expense_category(query: types.CallbackQuery, state: FSMContext):
-    category_id = int(query.data.replace("catid_", ""))
+    category_id = int(query.data.replace("expense_cat_", ""))
     await state.update_data(category_id=category_id)
     await state.set_state(AddExpenseStates.waiting_for_date)
     await query.message.answer("Укажите дату расхода в формате ДД.ММ.ГГГГ (или 'сегодня'):")
