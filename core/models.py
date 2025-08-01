@@ -1,6 +1,7 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
+from django.contrib.auth.models import User
 
 
 class Category(models.Model):
@@ -61,3 +62,56 @@ class CategoryLimit(models.Model):
 
     def __str__(self):
         return f"{self.user}: {self.category.name} ({self.get_period_type_display()}) — лимит {self.amount} руб."
+
+
+class UserProfile(models.Model):
+    """
+    Профиль пользователя для расширения стандартного User.
+    Связывает Telegram ID с User и хранит настройки.
+    """
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    telegram_id = models.BigIntegerField(unique=True, null=True, blank=True, help_text="Telegram user ID")
+    # В будущем можно добавить настройки уведомлений и т.д.
+
+    def __str__(self):
+        return f"{self.user.username} (TG: {self.telegram_id})"
+
+
+class Advice(models.Model):
+    """
+    Совет для пользователя (например, рекомендация по тратам).
+    """
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    category = models.ForeignKey('Category', on_delete=models.SET_NULL, null=True, blank=True)
+    text = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    advice_type = models.CharField(max_length=50, default='general', help_text="Тип совета (например, лимит, аномалия, общие)")
+
+    def __str__(self):
+        return f"{self.user.username}: {self.text[:30]}... ({self.created_at:%Y-%m-%d})"
+
+class Anomaly(models.Model):
+    """
+    Аномалия в тратах/доходах пользователя.
+    """
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    category = models.ForeignKey('Category', on_delete=models.SET_NULL, null=True, blank=True)
+    date = models.DateField()
+    description = models.TextField()
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+
+    def __str__(self):
+        return f"{self.user.username}: {self.description[:30]}... ({self.date})"
+
+class NotificationHistory(models.Model):
+    """
+    История отправленных уведомлений пользователю.
+    """
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    notification_type = models.CharField(max_length=50, help_text="Тип уведомления (ежедневное, лимит, аномалия и т.д.)")
+    text = models.TextField()
+    sent_at = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=20, default='sent', help_text="Статус уведомления (sent, failed, etc.)")
+
+    def __str__(self):
+        return f"{self.user.username}: {self.notification_type} ({self.sent_at:%Y-%m-%d %H:%M})"
