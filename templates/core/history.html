@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+<div class="container mt-4">
+  <h2>История операций</h2>
+  <form method="get" class="row g-3 mb-4">
+    <div class="col-md-3">
+      <label for="date_from" class="form-label">С даты</label>
+      <input type="date" class="form-control" id="date_from" name="date_from" value="{{ date_from }}">
+    </div>
+    <div class="col-md-3">
+      <label for="date_to" class="form-label">По дату</label>
+      <input type="date" class="form-control" id="date_to" name="date_to" value="{{ date_to }}">
+    </div>
+    <div class="col-md-3">
+      <label for="category" class="form-label">Категория</label>
+      <select class="form-select" id="category" name="category">
+        <option value="">Все</option>
+        {% for cat in categories %}
+          <option value="{{ cat.id }}" {% if cat.id == category_id %}selected{% endif %}>{{ cat.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3 align-self-end">
+      <button type="submit" class="btn btn-primary">Фильтровать</button>
+    </div>
+  </form>
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th>Дата</th>
+        <th>Категория</th>
+        <th>Сумма</th>
+        <th>Описание</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for t in transactions %}
+      <tr>
+        <td>{{ t.date }}</td>
+        <td>{{ t.category.name }}</td>
+        <td>{% if t.category.is_income %}<span class="text-success">+{{ t.amount }}</span>{% else %}<span class="text-danger">-{{ t.amount }}</span>{% endif %}</td>
+        <td>{{ t.description|default:'-' }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="4" class="text-center">Нет операций за выбранный период.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

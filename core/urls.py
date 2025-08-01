@@ -2,7 +2,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
     CategoryViewSet, TransactionViewSet, AdviceViewSet, AnomalyViewSet,
-    NotificationHistoryViewSet, UserProfileViewSet, FavoriteReportViewSet
+    NotificationHistoryViewSet, UserProfileViewSet, FavoriteReportViewSet, HistoryView
 )
 
 router = DefaultRouter()
@@ -16,4 +16,8 @@ router.register('favorite_reports', FavoriteReportViewSet)
 
 urlpatterns = [
     path('api/', include(router.urls)),
+]
+
+urlpatterns += [
+    path('history/', HistoryView.as_view(), name='history'),
 ]
