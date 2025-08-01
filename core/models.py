@@ -2,6 +2,7 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
 from django.contrib.auth.models import User
+from django.db.models import JSONField
 
 
 class Category(models.Model):
@@ -115,3 +116,16 @@ class NotificationHistory(models.Model):
 
     def __str__(self):
         return f"{self.user.username}: {self.notification_type} ({self.sent_at:%Y-%m-%d %H:%M})"
+
+class FavoriteReport(models.Model):
+    """
+    Избранный отчёт пользователя (сохраняет параметры для быстрого доступа).
+    """
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    name = models.CharField(max_length=100)
+    report_type = models.CharField(max_length=50, help_text="Тип отчёта: history, chart и т.д.")
+    params = JSONField(help_text="Параметры фильтра/отчёта (например, период, категория)")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user.username}: {self.name} ({self.report_type})"
