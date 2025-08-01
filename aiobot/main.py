@@ -26,6 +26,8 @@ from handlers.history import register_history_handlers
 from handlers.summary import register_summary_handlers
 from handlers.charts import register_chart_handlers
 from handlers.limits import register_limit_handlers
+from handlers.favorites import register_favorites_handlers
+from handlers.notifications import register_notifications_handlers
 
 
 # ====== Загрузка переменных окружения ======
@@ -52,6 +54,8 @@ register_summary_handlers(dp)
 register_chart_handlers(dp)
 register_limit_handlers(dp)
 register_start_handlers(dp)
+register_favorites_handlers(dp)
+register_notifications_handlers(dp)
 
 # ====== Основная точка входа ======
 async def main():

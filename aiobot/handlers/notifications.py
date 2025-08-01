@@ -21,3 +21,6 @@ async def show_notifications(message: types.Message):
         await message.answer("Последние уведомления:\n" + "\n".join(lines))
     except User.DoesNotExist:
         await message.answer("Пользователь не найден.")
+
+def register_notifications_handlers(dp):
+    dp.include_router(router)

@@ -10,3 +10,6 @@ async def show_favorites(message: types.Message):
 @router.message(Command("add_favorite"))
 async def add_favorite(message: types.Message):
     await message.answer("Добавление в избранное пока не реализовано. В будущем вы сможете сохранять отчёты в избранное одной командой.")
+
+def register_favorites_handlers(dp):
+    dp.include_router(router)
