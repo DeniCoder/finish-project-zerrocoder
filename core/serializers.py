@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Category, Transaction, Advice, Anomaly, NotificationHistory, UserProfile
+from .models import Category, Transaction, Advice, Anomaly, NotificationHistory, UserProfile, FavoriteReport
 
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
@@ -33,4 +33,9 @@ class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserProfile
         fields = ['id', 'user', 'telegram_id']
+
+class FavoriteReportSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FavoriteReport
+        fields = ['id', 'user', 'name', 'report_type', 'params', 'created_at']
 

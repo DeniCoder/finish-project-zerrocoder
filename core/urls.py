@@ -2,7 +2,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
     CategoryViewSet, TransactionViewSet, AdviceViewSet, AnomalyViewSet,
-    NotificationHistoryViewSet, UserProfileViewSet
+    NotificationHistoryViewSet, UserProfileViewSet, FavoriteReportViewSet
 )
 
 router = DefaultRouter()
@@ -12,6 +12,7 @@ router.register('advice', AdviceViewSet)
 router.register('anomaly', AnomalyViewSet)
 router.register('notification_history', NotificationHistoryViewSet)
 router.register('user_profile', UserProfileViewSet)
+router.register('favorite_reports', FavoriteReportViewSet)
 
 urlpatterns = [
     path('api/', include(router.urls)),

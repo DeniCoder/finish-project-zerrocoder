@@ -1,6 +1,6 @@
 from rest_framework import viewsets, permissions
-from .models import Category, Transaction, Advice, Anomaly, NotificationHistory, UserProfile
-from .serializers import CategorySerializer, TransactionSerializer, AdviceSerializer, AnomalySerializer, NotificationHistorySerializer, UserProfileSerializer
+from .models import Category, Transaction, Advice, Anomaly, NotificationHistory, UserProfile, FavoriteReport
+from .serializers import CategorySerializer, TransactionSerializer, AdviceSerializer, AnomalySerializer, NotificationHistorySerializer, UserProfileSerializer, FavoriteReportSerializer
 from django_filters.rest_framework import DjangoFilterBackend
 
 class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
@@ -33,3 +33,7 @@ class NotificationHistoryViewSet(viewsets.ModelViewSet):
 class UserProfileViewSet(viewsets.ModelViewSet):
     queryset = UserProfile.objects.all()
     serializer_class = UserProfileSerializer
+
+class FavoriteReportViewSet(viewsets.ModelViewSet):
+    queryset = FavoriteReport.objects.all()
+    serializer_class = FavoriteReportSerializer
